@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abysse – Laboratoire d'évolution</title>
+<style>
+  :root { --bg:#0b0e15; --panel:#151923; --panel2:#1c2130; --line:#2a3043; --text:#e6e8ef; --muted:#8a90a6; --blue:#338ced; --orange:#e76624; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+  #app { display: grid; grid-template-columns: 290px 1fr 370px; grid-template-rows: 50px 1fr; height: 100vh; }
+  #top { grid-column: 1 / 4; display: flex; align-items: center; gap: 14px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  #top h1 { font-size: 16px; font-weight: 700; white-space: nowrap; }
+  #top h1 span { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .grp { display: flex; align-items: center; gap: 3px; background: var(--bg); border-radius: 9px; padding: 3px; }
+  .grp .t { color: var(--muted); font-size: 11px; padding: 0 6px; }
+  button { font: inherit; padding: 6px 10px; border-radius: 7px; border: none; background: var(--panel2); color: var(--text); cursor: pointer; white-space: nowrap; }
+  button:hover { background: #283048; }
+  button.on { background: #2563b8; }
+  button.primary { background: #2563b8; } button.primary:hover { background: #2d72d2; }
+  button.danger:hover { background: #7a2e33; }
+  .grp button { background: transparent; padding: 5px 8px; }
+  .grp button:hover { background: var(--panel2); }
+  .grp button.on { background: #2563b8; }
+  .spacer { flex: 1; }
+  #saveState { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+  aside { background: var(--panel); overflow-y: auto; }
+  #left { border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  #right { border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+  .h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .card { background: var(--panel2); border-radius: 11px; padding: 10px; border: 2px solid transparent; cursor: pointer; }
+  .card.sel { border-color: #3d6fd0; }
+  .card .top { display: flex; gap: 9px; align-items: center; }
+  .card canvas { width: 72px; height: 44px; border-radius: 7px; background: #0c2540; flex: none; }
+  .card .name { font-weight: 650; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .sub { color: var(--muted); font-size: 11px; margin-top: 2px; line-height: 1.4; }
+  .chipst { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #233; }
+  .chipst.run { background: #1d4d33; color: #9be3b8; } .chipst.ice { background: #23365a; color: #a9c8f5; }
+  .card .bar { height: 3px; background: #2a3043; border-radius: 2px; margin: 8px 0 7px; overflow: hidden; }
+  .card .bar div { height: 100%; background: var(--blue); }
+  .card .btns { display: flex; gap: 4px; }
+  .card .btns button { flex: 1; padding: 5px 0; font-size: 12px; background: #262c3e; }
+  .card .btns button:hover { background: #313954; }
+
+  #center { position: relative; overflow: hidden; background: #04101f; }
+  #ocean { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; }
+  #ocean.drag { cursor: grabbing; }
+  #minimap { position: absolute; left: 12px; bottom: 12px; border-radius: 9px; border: 1px solid rgba(255,255,255,.15); cursor: pointer; }
+  #hud { position: absolute; left: 12px; top: 10px; background: rgba(4,14,28,.6); padding: 6px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; pointer-events: none; }
+  #zoomBtns { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+  #zoomBtns button { width: 34px; height: 34px; padding: 0; font-size: 16px; background: rgba(21,25,35,.85); }
+  #toast { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); background: rgba(21,25,35,.95); border: 1px solid var(--line); padding: 9px 14px; border-radius: 10px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 70%; text-align: center; }
+  #toast.show { opacity: 1; }
+  #duelHud { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: none; gap: 10px; align-items: stretch; z-index: 5; }
+  #duelHud.show { display: flex; }
+  .dside { background: rgba(10,16,28,.88); border-radius: 12px; padding: 8px 14px; min-width: 190px; border: 2px solid; }
+  .dside .n { font-weight: 700; font-size: 14px; } .dside .s { font-size: 12px; color: #c9cede; margin-top: 3px; line-height: 1.5; }
+  .dmid { background: rgba(10,16,28,.88); border-radius: 12px; padding: 8px 14px; text-align: center; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .dmid .clock { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #winner { position: absolute; left: 50%; top: 45%; transform: translate(-50%,-50%); background: rgba(10,16,28,.94); border: 1px solid var(--line); border-radius: 16px; padding: 22px 30px; text-align: center; display: none; z-index: 6; }
+  #winner.show { display: block; } #winner h2 { font-size: 24px; margin-bottom: 8px; } #winner p { color: #c9cede; margin-bottom: 14px; line-height: 1.5; }
+  .spec { background: var(--panel2); border-radius: 11px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .spec .top { display: flex; gap: 10px; align-items: center; } .spec canvas { width: 84px; height: 52px; background: #0c2540; border-radius: 7px; flex: none; }
+  .spec input { width: 100%; font-weight: 650; }
+  .spec .btns { display: flex; gap: 4px; flex-wrap: wrap; } .spec .btns button { flex: 1; font-size: 12px; padding: 5px 6px; }
+  .duelcol { background: var(--bg); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  #oceanMenu { position: absolute; top: 56px; right: 380px; width: 300px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; z-index: 20; display: none; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  #oceanMenu.show { display: block; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; border-radius: 0; background: transparent; padding: 12px 0; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--blue); background: transparent; }
+  .tabpage { padding: 14px; display: none; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+  .tabpage.show { display: flex; }
+  .placeholder { color: var(--muted); text-align: center; padding: 40px 10px; line-height: 1.6; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 7px 8px; }
+  .stat .v { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 10px; color: var(--muted); }
+  .canvasbox { position: relative; background: var(--bg); border-radius: 10px; overflow: hidden; }
+  .canvasbox canvas { display: block; }
+  .legend { display: flex; gap: 12px; font-size: 11px; color: #c9cede; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .smalls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .smalls .t { font-size: 11px; color: #c9cede; margin-bottom: 3px; }
+  .fossils { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .fossil { flex: none; background: var(--bg); border-radius: 8px; padding: 4px; cursor: pointer; text-align: center; font-size: 10px; color: var(--muted); border: 1px solid transparent; }
+  .fossil:hover { border-color: #3d6fd0; }
+  .fossil canvas { display: block; width: 84px; height: 52px; }
+  .log { font-size: 12px; color: #a6abbf; line-height: 1.6; max-height: 170px; overflow-y: auto; }
+  select, input[type=text], input[type=number] { font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; }
+  input[type=range] { width: 100%; accent-color: #338ced; }
+  .genes { display: flex; flex-direction: column; gap: 5px; }
+  .gene { display: grid; grid-template-columns: 130px 1fr 46px; gap: 8px; align-items: center; font-size: 12px; }
+  .gene .gb { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .gene .gb div { height: 100%; background: var(--blue); border-radius: 3px; }
+  .gene .gv { text-align: right; font-variant-numeric: tabular-nums; color: #c9cede; }
+  .energy { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .energy div { height: 100%; background: #0aac23; }
+  .kv { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+  .kv span:first-child { color: var(--muted); }
+
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; z-index: 50; align-items: center; justify-content: center; }
+  #modal.show { display: flex; }
+  .mbox { width: min(1100px, 96vw); height: min(820px, 94vh); background: var(--panel); border-radius: 16px; display: grid; grid-template-columns: 1fr 380px; overflow: hidden; border: 1px solid var(--line); }
+  .mform { overflow-y: auto; padding: 20px 22px; }
+  .mform h2 { font-size: 18px; margin-bottom: 4px; }
+  .mform .intro { color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .sec { margin-top: 18px; }
+  .sec > .h { margin-bottom: 10px; }
+  .field { display: grid; grid-template-columns: 220px 1fr 80px; gap: 10px; align-items: center; margin-bottom: 9px; }
+  .field label { color: #c9cede; font-size: 12px; line-height: 1.3; }
+  .field .val { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; color: #c9cede; }
+  .field .two { display: flex; gap: 8px; }
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+  .checks label { display: flex; gap: 7px; align-items: center; font-size: 12px; color: #c9cede; cursor: pointer; }
+  .mside { background: var(--bg); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .mside canvas { border-radius: 12px; display: block; }
+  .mfoot { display: flex; gap: 8px; margin-top: auto; }
+  .mfoot button { flex: 1; padding: 10px; }
+  #tip { position: fixed; pointer-events: none; background: #0b0e15; border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font-size: 12px; line-height: 1.45; display: none; z-index: 100; white-space: nowrap; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-thumb { background: #2a3043; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <h1>🌊 Abysse <span>laboratoire d'évolution</span></h1>
+    <div class="grp" id="timeGrp"><span class="t">Temps</span></div>
+    <div class="grp" id="ovGrp"><span class="t">Voir</span></div>
+    <button id="oceanBtn">⚙ Océan</button>
+    <button id="arenaBtn" class="primary">⚔ Arène</button>
+    <div class="spacer"></div>
+    <span id="saveState">–</span>
+    <button id="saveBtn" title="Sauvegarder maintenant">💾</button>
+  </div>
+
+  <aside id="left">
+    <div class="row" style="justify-content:space-between"><div class="h">🧪 Laboratoire</div><span id="labSpeed" class="h"></span></div>
+    <div class="row">
+      <button class="primary" id="newSpecies" style="flex:1">+ Nouvelle espèce</button>
+      <button id="importBtn" title="Importer une espèce (.json)">⬆ Importer</button>
+    </div>
+    <div id="speciesList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="h" style="margin-top:6px;line-height:1.6;text-transform:none;letter-spacing:0">
+      🧬 évoluer / ❄ stocker · 🌊 lâcher 12 champions dans l'océan (là où tu regardes) · ✏ contraintes · ⧉ dupliquer · ⬇ exporter
+    </div>
+  </aside>
+
+  <main id="center">
+    <canvas id="ocean"></canvas>
+    <canvas id="minimap" width="220" height="138"></canvas>
+    <div id="hud"></div>
+    <div id="zoomBtns"><button id="zin">+</button><button id="zout">−</button><button id="zfit" title="Vue d'ensemble">⤢</button></div>
+    <div id="toast"></div>
+    <div id="duelHud"></div>
+    <div id="winner"></div>
+  </main>
+
+  <aside id="right">
+    <div class="tabs"><button data-tab="sp" class="on">🧬 Espèce</button><button data-tab="ind">🔬 Individu</button><button data-tab="spec">⭐ Spécimens</button></div>
+    <div class="tabpage show" id="tab-sp"></div>
+    <div class="tabpage" id="tab-ind"></div>
+    <div class="tabpage" id="tab-spec"></div>
+  </aside>
+</div>
+
+<div id="oceanMenu"></div>
+<div id="modal"></div>
+<div id="tip"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script id="core">
+/*CORE*/
+</script>
+<script>
+/*MAIN*/
+</script>
+</body>
+</html>

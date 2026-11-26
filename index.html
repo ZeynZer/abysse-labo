@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abysse – Laboratoire d'évolution</title>
+<style>
+  :root { --bg:#0b0e15; --panel:#151923; --panel2:#1c2130; --line:#2a3043; --text:#e6e8ef; --muted:#8a90a6; --blue:#338ced; --orange:#e76624; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+  #app { display: grid; grid-template-columns: 290px 1fr 370px; grid-template-rows: 50px 1fr; height: 100vh; }
+  #top { grid-column: 1 / 4; display: flex; align-items: center; gap: 14px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  #top h1 { font-size: 16px; font-weight: 700; white-space: nowrap; }
+  #top h1 span { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .grp { display: flex; align-items: center; gap: 3px; background: var(--bg); border-radius: 9px; padding: 3px; }
+  .grp .t { color: var(--muted); font-size: 11px; padding: 0 6px; }
+  button { font: inherit; padding: 6px 10px; border-radius: 7px; border: none; background: var(--panel2); color: var(--text); cursor: pointer; white-space: nowrap; }
+  button:hover { background: #283048; }
+  button.on { background: #2563b8; }
+  button.primary { background: #2563b8; } button.primary:hover { background: #2d72d2; }
+  button.danger:hover { background: #7a2e33; }
+  .grp button { background: transparent; padding: 5px 8px; }
+  .grp button:hover { background: var(--panel2); }
+  .grp button.on { background: #2563b8; }
+  .spacer { flex: 1; }
+  #saveState { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+  aside { background: var(--panel); overflow-y: auto; }
+  #left { border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  #right { border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+  .h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .card { background: var(--panel2); border-radius: 11px; padding: 10px; border: 2px solid transparent; cursor: pointer; }
+  .card.sel { border-color: #3d6fd0; }
+  .card .top { display: flex; gap: 9px; align-items: center; }
+  .card canvas { width: 72px; height: 44px; border-radius: 7px; background: #0c2540; flex: none; }
+  .card .name { font-weight: 650; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .sub { color: var(--muted); font-size: 11px; margin-top: 2px; line-height: 1.4; }
+  .chipst { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #233; }
+  .chipst.run { background: #1d4d33; color: #9be3b8; } .chipst.ice { background: #23365a; color: #a9c8f5; }
+  .card .bar { height: 3px; background: #2a3043; border-radius: 2px; margin: 8px 0 7px; overflow: hidden; }
+  .card .bar div { height: 100%; background: var(--blue); }
+  .card .btns { display: flex; gap: 4px; }
+  .card .btns button { flex: 1; padding: 5px 0; font-size: 12px; background: #262c3e; }
+  .card .btns button:hover { background: #313954; }
+
+  #center { position: relative; overflow: hidden; background: #04101f; }
+  #ocean { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; }
+  #ocean.drag { cursor: grabbing; }
+  #minimap { position: absolute; left: 12px; bottom: 12px; border-radius: 9px; border: 1px solid rgba(255,255,255,.15); cursor: pointer; }
+  #hud { position: absolute; left: 12px; top: 10px; background: rgba(4,14,28,.6); padding: 6px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; pointer-events: none; }
+  #zoomBtns { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+  #zoomBtns button { width: 34px; height: 34px; padding: 0; font-size: 16px; background: rgba(21,25,35,.85); }
+  #toast { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); background: rgba(21,25,35,.95); border: 1px solid var(--line); padding: 9px 14px; border-radius: 10px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 70%; text-align: center; }
+  #toast.show { opacity: 1; }
+  #duelHud { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: none; gap: 10px; align-items: stretch; z-index: 5; }
+  #duelHud.show { display: flex; }
+  .dside { background: rgba(10,16,28,.88); border-radius: 12px; padding: 8px 14px; min-width: 190px; border: 2px solid; }
+  .dside .n { font-weight: 700; font-size: 14px; } .dside .s { font-size: 12px; color: #c9cede; margin-top: 3px; line-height: 1.5; }
+  .dmid { background: rgba(10,16,28,.88); border-radius: 12px; padding: 8px 14px; text-align: center; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .dmid .clock { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #winner { position: absolute; left: 50%; top: 45%; transform: translate(-50%,-50%); background: rgba(10,16,28,.94); border: 1px solid var(--line); border-radius: 16px; padding: 22px 30px; text-align: center; display: none; z-index: 6; }
+  #winner.show { display: block; } #winner h2 { font-size: 24px; margin-bottom: 8px; } #winner p { color: #c9cede; margin-bottom: 14px; line-height: 1.5; }
+  .spec { background: var(--panel2); border-radius: 11px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .spec .top { display: flex; gap: 10px; align-items: center; } .spec canvas { width: 84px; height: 52px; background: #0c2540; border-radius: 7px; flex: none; }
+  .spec input { width: 100%; font-weight: 650; }
+  .spec .btns { display: flex; gap: 4px; flex-wrap: wrap; } .spec .btns button { flex: 1; font-size: 12px; padding: 5px 6px; }
+  .duelcol { background: var(--bg); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  #oceanMenu { position: absolute; top: 56px; right: 380px; width: 300px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; z-index: 20; display: none; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  #oceanMenu.show { display: block; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; border-radius: 0; background: transparent; padding: 12px 0; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--blue); background: transparent; }
+  .tabpage { padding: 14px; display: none; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+  .tabpage.show { display: flex; }
+  .placeholder { color: var(--muted); text-align: center; padding: 40px 10px; line-height: 1.6; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 7px 8px; }
+  .stat .v { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 10px; color: var(--muted); }
+  .canvasbox { position: relative; background: var(--bg); border-radius: 10px; overflow: hidden; }
+  .canvasbox canvas { display: block; }
+  .legend { display: flex; gap: 12px; font-size: 11px; color: #c9cede; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .smalls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .smalls .t { font-size: 11px; color: #c9cede; margin-bottom: 3px; }
+  .fossils { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .fossil { flex: none; background: var(--bg); border-radius: 8px; padding: 4px; cursor: pointer; text-align: center; font-size: 10px; color: var(--muted); border: 1px solid transparent; }
+  .fossil:hover { border-color: #3d6fd0; }
+  .fossil canvas { display: block; width: 84px; height: 52px; }
+  .log { font-size: 12px; color: #a6abbf; line-height: 1.6; max-height: 170px; overflow-y: auto; }
+  select, input[type=text], input[type=number] { font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; }
+  input[type=range] { width: 100%; accent-color: #338ced; }
+  .genes { display: flex; flex-direction: column; gap: 5px; }
+  .gene { display: grid; grid-template-columns: 130px 1fr 46px; gap: 8px; align-items: center; font-size: 12px; }
+  .gene .gb { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .gene .gb div { height: 100%; background: var(--blue); border-radius: 3px; }
+  .gene .gv { text-align: right; font-variant-numeric: tabular-nums; color: #c9cede; }
+  .energy { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .energy div { height: 100%; background: #0aac23; }
+  .kv { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+  .kv span:first-child { color: var(--muted); }
+
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; z-index: 50; align-items: center; justify-content: center; }
+  #modal.show { display: flex; }
+  .mbox { width: min(1100px, 96vw); height: min(820px, 94vh); background: var(--panel); border-radius: 16px; display: grid; grid-template-columns: 1fr 380px; overflow: hidden; border: 1px solid var(--line); }
+  .mform { overflow-y: auto; padding: 20px 22px; }
+  .mform h2 { font-size: 18px; margin-bottom: 4px; }
+  .mform .intro { color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .sec { margin-top: 18px; }
+  .sec > .h { margin-bottom: 10px; }
+  .field { display: grid; grid-template-columns: 220px 1fr 80px; gap: 10px; align-items: center; margin-bottom: 9px; }
+  .field label { color: #c9cede; font-size: 12px; line-height: 1.3; }
+  .field .val { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; color: #c9cede; }
+  .field .two { display: flex; gap: 8px; }
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+  .checks label { display: flex; gap: 7px; align-items: center; font-size: 12px; color: #c9cede; cursor: pointer; }
+  .mside { background: var(--bg); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .mside canvas { border-radius: 12px; display: block; }
+  .mfoot { display: flex; gap: 8px; margin-top: auto; }
+  .mfoot button { flex: 1; padding: 10px; }
+  #tip { position: fixed; pointer-events: none; background: #0b0e15; border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font-size: 12px; line-height: 1.45; display: none; z-index: 100; white-space: nowrap; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-thumb { background: #2a3043; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <h1>🌊 Abysse <span>laboratoire d'évolution</span></h1>
+    <div class="grp" id="timeGrp"><span class="t">Temps</span></div>
+    <div class="grp" id="ovGrp"><span class="t">Voir</span></div>
+    <button id="oceanBtn">⚙ Océan</button>
+    <button id="arenaBtn" class="primary">⚔ Arène</button>
+    <div class="spacer"></div>
+    <span id="saveState">–</span>
+    <button id="saveBtn" title="Sauvegarder maintenant">💾</button>
+  </div>
+
+  <aside id="left">
+    <div class="row" style="justify-content:space-between"><div class="h">🧪 Laboratoire</div><span id="labSpeed" class="h"></span></div>
+    <div class="row">
+      <button class="primary" id="newSpecies" style="flex:1">+ Nouvelle espèce</button>
+      <button id="importBtn" title="Importer une espèce (.json)">⬆ Importer</button>
+    </div>
+    <div id="speciesList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="h" style="margin-top:6px;line-height:1.6;text-transform:none;letter-spacing:0">
+      🧬 évoluer / ❄ stocker · 🌊 lâcher 12 champions dans l'océan (là où tu regardes) · ✏ contraintes · ⧉ dupliquer · ⬇ exporter
+    </div>
+  </aside>
+
+  <main id="center">
+    <canvas id="ocean"></canvas>
+    <canvas id="minimap" width="220" height="138"></canvas>
+    <div id="hud"></div>
+    <div id="zoomBtns"><button id="zin">+</button><button id="zout">−</button><button id="zfit" title="Vue d'ensemble">⤢</button></div>
+    <div id="toast"></div>
+    <div id="duelHud"></div>
+    <div id="winner"></div>
+  </main>
+
+  <aside id="right">
+    <div class="tabs"><button data-tab="sp" class="on">🧬 Espèce</button><button data-tab="ind">🔬 Individu</button><button data-tab="spec">⭐ Spécimens</button></div>
+    <div class="tabpage show" id="tab-sp"></div>
+    <div class="tabpage" id="tab-ind"></div>
+    <div class="tabpage" id="tab-spec"></div>
+  </aside>
+</div>
+
+<div id="oceanMenu"></div>
+<div id="modal"></div>
+<div id="tip"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script id="core">
+// =====================================================================
+//  NOYAU PARTAGÉ (thread principal + worker du labo)
+// =====================================================================
+const NIN = 13;
+const SENSOR_DEFS = [
+  { k: 'rhythm', name: 'Rythme interne (oscillateur, comme la moelle épinière)', idx: [0, 1] },
+  { k: 'target', name: 'Direction de la cible (vision)', idx: [2, 3] },
+  { k: 'dist', name: 'Distance de la cible', idx: [4] },
+  { k: 'speed', name: 'Vitesse propre (ligne latérale)', idx: [5] },
+  { k: 'spin', name: 'Équilibre (rotation)', idx: [6] },
+  { k: 'energy', name: 'Faim (niveau d\'énergie)', idx: [7] },
+  { k: 'proprio', name: 'Proprioception (sens de la forme du corps)', idx: [8, 9] },
+  { k: 'danger', name: 'Détection des prédateurs (peur)', idx: [10, 11] },
+];
+const INPUT_LABELS = ['Rythme sin', 'Rythme cos', 'Cible devant', 'Cible côté', 'Distance', 'Vitesse', 'Rotation', 'Énergie', 'Courbure tête', 'Courbure queue', 'Danger devant', 'Danger côté', 'Biais'];
+const GOALS = {
+  hunt: '🦐 Chasser les crevettes',
+  speed: '⚡ Nager le plus vite possible',
+  left: '⬅ Nager vers la gauche',
+  right: '➡ Nager vers la droite',
+  up: '⬆ Monter vers la surface',
+  down: '⬇ Plonger vers le fond',
+  spin: '🌀 Tourner sur soi-même',
+  predator: '🦈 Attraper une proie qui fuit',
+  survive: '🐡 Manger sans se faire manger',
+};
+const DIETS = { herbivore: '🦐 Mange des crevettes', carnivore: '🦈 Prédateur (mange les autres espèces)', omnivore: '🍽 Omnivore (crevettes + autres espèces)' };
+const GOAL_DIRS = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+const ACT_NAMES = { tanh: 'Tangente hyperbolique (douce)', relu: 'ReLU (seuil, comme un neurone qui « tire »)', sin: 'Sinus (neurones oscillants)', sigmoid: 'Sigmoïde (centrée)' };
+const CN = 0.35, CT = 0.025;
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const gauss = () => Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
+const arr = (n, f) => Array.from({ length: n }, f);
+const newId = () => Math.floor(Math.random() * 2147483647);
+
+function defaultCfg() {
+  return {
+    name: 'Nageur primitif', hue: 185, pattern: 'stripes', diet: 'herbivore',
+    body: { segMin: 2, segMax: 16, segStart: 3, lenMin: 6, lenMax: 14, widthMin: 6, widthMax: 16, taperMin: 0.7, taperMax: 1, finMax: 3, pectMax: 2, strMax: 0.25, flexMax: 0.9, freqMax: 0.2 },
+    brain: { layers: [12], act: 'tanh', recurrent: false, neurogenesis: true,
+      sensors: { rhythm: true, target: true, dist: true, speed: false, spin: false, energy: false, proprio: false, danger: false } },
+    evo: { pop: 200, mutRate: 0.08, mutPower: 0.4, elite: 0.05, crossover: true, trials: 2, vertMut: 0.05 },
+    goal: { type: 'hunt', energyCost: 1, dur: 500 },
+    env: { viscosity: 1 },
+  };
+}
+
+// ---------------- Cerveau ----------------
+function brainSizes(cfg) { return [NIN, ...cfg.brain.layers, cfg.body.segMax - 1]; }
+function makeBrain(cfg) {
+  const s = brainSizes(cfg), W = [];
+  for (let l = 0; l < s.length - 1; l++) W.push(arr((s[l] + 1) * s[l + 1], () => gauss() * 2.2 / Math.sqrt(s[l] + 1)));
+  const R = cfg.brain.recurrent ? arr(s[1] * s[1], () => gauss() * 0.25) : null;
+  const active = cfg.brain.layers.map(h => cfg.brain.neurogenesis ? Math.max(2, Math.ceil(h / 2)) : h);
+  return { W, R, active, sizes: s };
+}
+function copyW(src, sIn, sOut, dst, dIn, dOut) {
+  for (let o = 0; o < Math.min(sOut, dOut); o++) {
+    for (let i = 0; i < Math.min(sIn, dIn); i++) dst[o * (dIn + 1) + i] = src[o * (sIn + 1) + i];
+    dst[o * (dIn + 1) + dIn] = src[o * (sIn + 1) + sIn];
+  }
+}
+function fitBrain(b, cfg) {
+  const s = brainSizes(cfg), L = cfg.brain.layers;
+  const same = b && b.sizes.length === s.length && b.sizes.every((v, i) => v === s[i]) && (!!b.R === !!cfg.brain.recurrent);
+  if (!same) {
+    const nb = makeBrain(cfg);
+    if (b) {
+      const oh = b.W.length - 1, nh = nb.W.length - 1;
+      if (b.sizes[0] !== s[0] && oh > 0) { // anciennes versions : nouvelles entrées insérées avant le biais
+        const sIn = b.sizes[0], dIn = s[0], src = b.W[0], dst = nb.W[0];
+        for (let o = 0; o < Math.min(b.sizes[1], s[1]); o++) {
+          for (let i = 0; i < Math.min(sIn - 1, dIn - 1); i++) dst[o * (dIn + 1) + i] = src[o * (sIn + 1) + i];
+          for (let i = sIn - 1; i < dIn - 1; i++) dst[o * (dIn + 1) + i] = 0;
+          dst[o * (dIn + 1) + dIn - 1] = src[o * (sIn + 1) + sIn - 1]; dst[o * (dIn + 1) + dIn] = src[o * (sIn + 1) + sIn];
+        }
+      } else if (oh > 0) copyW(b.W[0], b.sizes[0], b.sizes[1], nb.W[0], s[0], s[1]);
+      for (let l = 1; l < Math.min(oh, nh); l++) copyW(b.W[l], b.sizes[l], b.sizes[l + 1], nb.W[l], s[l], s[l + 1]);
+      copyW(b.W[oh], b.sizes[oh], b.sizes[oh + 1], nb.W[nh], s[nh], s[nh + 1]);
+      if (b.R && nb.R) { const oH = b.sizes[1], nH = s[1]; for (let o = 0; o < Math.min(oH, nH); o++) for (let r = 0; r < Math.min(oH, nH); r++) nb.R[o * nH + r] = b.R[o * oH + r]; }
+      for (let l = 0; l < Math.min(b.active.length, nb.active.length); l++) nb.active[l] = b.active[l];
+    }
+    b = nb;
+  }
+  b.active = L.map((h, l) => cfg.brain.neurogenesis ? clamp(b.active[l] || 2, 1, h) : h);
+  return b;
+}
+function synapseCount(cfg) {
+  const s = brainSizes(cfg); let n = 0;
+  for (let l = 0; l < s.length - 1; l++) n += (s[l] + 1) * s[l + 1];
+  if (cfg.brain.recurrent) n += s[1] * s[1];
+  return n;
+}
+
+// ---------------- Génome ----------------
+const MORPH = [['segLen', 'lenMin', 'lenMax'], ['headW', 'widthMin', 'widthMax'], ['taper', 'taperMin', 'taperMax'], ['fin', null, 'finMax'], ['pect', null, 'pectMax'], ['flex', null, 'flexMax'], ['str', null, 'strMax'], ['freq', null, 'freqMax']];
+function randGenome(cfg) {
+  const b = cfg.body;
+  return clampGenome({
+    id: newId(), nSeg: b.segStart, segLen: rnd(b.lenMin, b.lenMax), headW: rnd(b.widthMin, b.widthMax), taper: rnd(b.taperMin, b.taperMax),
+    fin: rnd(0, b.finMax * 0.5), pect: rnd(0, b.pectMax * 0.3), flex: rnd(0.3, 1) * b.flexMax, str: rnd(0.4, 1) * b.strMax,
+    freq: rnd(0.3, 1) * b.freqMax, hue: cfg.hue + rnd(-12, 12), brain: makeBrain(cfg),
+  }, cfg);
+}
+function clampGenome(g, cfg) {
+  const b = cfg.body;
+  g.nSeg = clamp(Math.round(g.nSeg), b.segMin, b.segMax);
+  g.segLen = clamp(g.segLen, b.lenMin, b.lenMax);
+  g.headW = clamp(g.headW, b.widthMin, b.widthMax);
+  g.taper = clamp(g.taper, b.taperMin, b.taperMax);
+  g.fin = clamp(g.fin, 0, b.finMax); g.pect = clamp(g.pect, 0, b.pectMax);
+  g.flex = clamp(g.flex, 0.05, b.flexMax); g.str = clamp(g.str, 0.02, b.strMax); g.freq = clamp(g.freq, 0.01, b.freqMax);
+  g.brain = fitBrain(g.brain, cfg);
+  return g;
+}
+function cloneG(g) {
+  return { ...g, id: newId(), brain: { W: g.brain.W.map(w => w.slice()), R: g.brain.R ? g.brain.R.slice() : null, active: g.brain.active.slice(), sizes: g.brain.sizes.slice() } };
+}
+function crossoverG(a, b) {
+  const c = cloneG(a);
+  for (const [k] of MORPH) if (Math.random() < 0.5) c[k] = b[k];
+  if (Math.random() < 0.5) c.nSeg = b.nSeg;
+  if (a.brain.sizes.join() === b.brain.sizes.join()) {
+    // on échange des neurones entiers (avec toutes leurs connexions) : plus réaliste et plus efficace
+    c.brain.W.forEach((w, l) => {
+      const inN = c.brain.sizes[l] + 1, outN = c.brain.sizes[l + 1];
+      for (let o = 0; o < outN; o++) if (Math.random() < 0.5) for (let i = 0; i < inN; i++) w[o * inN + i] = b.brain.W[l][o * inN + i];
+    });
+    if (c.brain.R && b.brain.R) for (let i = 0; i < c.brain.R.length; i++) if (Math.random() < 0.5) c.brain.R[i] = b.brain.R[i];
+  }
+  c.hue = (a.hue + b.hue) / 2;
+  return c;
+}
+function mutateG(g, cfg) {
+  const e = cfg.evo, b = cfg.body, mr = e.mutRate, mp = e.mutPower;
+  const mw = (w) => { for (let i = 0; i < w.length; i++) { const r = Math.random(); if (r < mr) w[i] += gauss() * mp; else if (r < mr * 1.05) w[i] = gauss(); } };
+  g.brain.W.forEach(mw); if (g.brain.R) mw(g.brain.R);
+  for (const [k, lo, hi] of MORPH) if (Math.random() < 0.15) g[k] += gauss() * (b[hi] - (lo ? b[lo] : 0)) * 0.07;
+  if (Math.random() < e.vertMut) g.nSeg++; else if (Math.random() < e.vertMut * 0.7) g.nSeg--;
+  if (cfg.brain.neurogenesis) g.brain.active = g.brain.active.map(a => Math.random() < 0.04 ? a + (Math.random() < 0.55 ? 1 : -1) : a);
+  g.hue += gauss() * 2;
+  return clampGenome(g, cfg);
+}
+
+// ---------------- Corps & physique ----------------
+const ACTF = {
+  tanh: Math.tanh,
+  relu: x => (x > 0 ? x : 0.05 * x),
+  sin: Math.sin,
+  sigmoid: x => 2 / (1 + Math.exp(-x)) - 1,
+};
+
+class Sim {
+  constructor(g, cfg, x, y, th, visc) {
+    this.g = g; this.cfg = cfg; this.visc = visc ?? cfg.env.viscosity;
+    const n = this.n = g.nSeg; this.L = g.segLen;
+    this.a = new Float64Array(n); this.effort = new Float64Array(n);
+    this.w = new Float64Array(n); this.m = new Float64Array(n); this.ar = new Float64Array(n); this.arN = new Float64Array(n);
+    let M = 0;
+    for (let i = 0; i < n; i++) {
+      const w = Math.max(2.5, g.headW * Math.pow(g.taper, i));
+      this.w[i] = w; this.ar[i] = this.L * w; this.arN[i] = this.ar[i];
+      if (i === n - 1) this.arN[i] += g.fin * w * this.L * 0.8;
+      if (i === 0 && n > 1) this.arN[i] += g.pect * w * this.L * 0.6;
+      this.m[i] = this.arN[i]; M += this.m[i];
+    }
+    this.M = M;
+    this.qx = new Float64Array(n); this.qy = new Float64Array(n); this.dir = new Float64Array(n);
+    this.nqx = new Float64Array(n); this.nqy = new Float64Array(n); this.ndir = new Float64Array(n);
+    this.fx = new Float64Array(n); this.fy = new Float64Array(n);
+    const s = g.brain.sizes;
+    this.inp = new Float64Array(NIN); this.out = new Float64Array(n);
+    this.acts = cfg.brain.layers.map((h, l) => new Float64Array(s[l + 1]));
+    this.prev = g.brain.R ? new Float64Array(s[1]) : null;
+    this.actf = ACTF[cfg.brain.act] || Math.tanh;
+    this.sens = cfg.brain.sensors;
+    this.x = x; this.y = y; this.th = th; this.th0 = th;
+    this.vx = 0; this.vy = 0; this.om = 0; this.t = 0; this.energy = 0; this.rot = 0; this.power = 0;
+    this.manual = null;
+    this.local(this.qx, this.qy, this.dir);
+  }
+
+  local(qx, qy, dir) {
+    const n = this.n, L = this.L, m = this.m, a = this.a;
+    let x = 0, y = 0, phi = 0, cx = 0, cy = 0;
+    for (let i = 0; i < n; i++) {
+      if (i > 0) phi += a[i];
+      const nx = x - L * Math.cos(phi), ny = y - L * Math.sin(phi);
+      qx[i] = (x + nx) / 2; qy[i] = (y + ny) / 2; dir[i] = phi;
+      cx += qx[i] * m[i]; cy += qy[i] * m[i];
+      x = nx; y = ny;
+    }
+    cx /= this.M; cy /= this.M;
+    for (let i = 0; i < n; i++) { qx[i] -= cx; qy[i] -= cy; }
+    this.cx = cx; this.cy = cy;
+  }
+
+  think(tx, ty, energyLevel, ux, uy) {
+    const g = this.g, inp = this.inp, sens = this.sens, b = g.brain, s = b.sizes, f = this.actf;
+    const dx = tx - this.x, dy = ty - this.y, d = Math.hypot(dx, dy) + 1e-6;
+    const c = Math.cos(this.th), sn = Math.sin(this.th), ph = this.t * g.freq;
+    inp[0] = sens.rhythm ? Math.sin(ph) : 0; inp[1] = sens.rhythm ? Math.cos(ph) : 0;
+    inp[2] = sens.target ? (dx * c + dy * sn) / d : 0; inp[3] = sens.target ? (-dx * sn + dy * c) / d : 0;
+    inp[4] = sens.dist ? Math.min(1, d / 400) : 0;
+    inp[5] = sens.speed ? (this.vx * c + this.vy * sn) / 3 : 0;
+    inp[6] = sens.spin ? clamp(this.om * 10, -1, 1) : 0;
+    inp[7] = sens.energy ? energyLevel : 0;
+    if (sens.proprio && this.n > 1) {
+      inp[8] = this.a[1] / g.flex;
+      let t = 0; for (let j = Math.max(1, this.n - 3); j < this.n; j++) t += this.a[j];
+      inp[9] = t / (Math.min(3, this.n - 1) * g.flex);
+    } else { inp[8] = 0; inp[9] = 0; }
+    if (sens.danger && ux !== undefined && ux === ux) {
+      const ex = ux - this.x, ey = uy - this.y, de = Math.hypot(ex, ey) + 1e-6, k = clamp(1 - de / 500, 0, 1) / de;
+      inp[10] = (ex * c + ey * sn) * k; inp[11] = (-ex * sn + ey * c) * k;
+    } else { inp[10] = 0; inp[11] = 0; }
+    inp[12] = 1;
+    let src = inp, srcN = NIN;
+    const nl = this.acts.length;
+    for (let l = 0; l < nl; l++) {
+      const W = b.W[l], inMax = s[l], dst = this.acts[l], act = b.active[l], stride = inMax + 1;
+      for (let o = 0; o < act; o++) {
+        const base = o * stride; let sum = W[base + inMax];
+        for (let i = 0; i < srcN; i++) sum += W[base + i] * src[i];
+        if (l === 0 && this.prev) { const R = b.R, H = s[1]; for (let r = 0; r < act; r++) sum += R[o * H + r] * this.prev[r]; }
+        dst[o] = f(sum);
+      }
+      for (let o = act; o < dst.length; o++) dst[o] = 0;
+      src = dst; srcN = act;
+    }
+    if (this.prev) this.prev.set(this.acts[0]);
+    const W = b.W[nl], inMax = s[nl], stride = inMax + 1;
+    for (let j = 1; j < this.n; j++) {
+      const base = (j - 1) * stride; let sum = W[base + inMax];
+      for (let i = 0; i < srcN; i++) sum += W[base + i] * src[i];
+      this.out[j] = Math.tanh(sum);
+    }
+  }
+
+  headPos() { const c = Math.cos(this.th), s = Math.sin(this.th); return [this.x - c * this.cx + s * this.cy, this.y - s * this.cx - c * this.cy]; }
+  step(tx, ty, dt, energyLevel, ux, uy) {
+    const g = this.g, n = this.n, a = this.a;
+    if (this.manual) { for (let j = 1; j < n; j++) this.out[j] = this.manual(j, this.t); }
+    else this.think(tx, ty, energyLevel ?? 1, ux, uy);
+    const k = Math.min(1, g.str * 2 * dt);
+    let pw = 0;
+    for (let j = 1; j < n; j++) {
+      const delta = (g.flex * this.out[j] - a[j]) * k;
+      a[j] += delta;
+      const e = Math.abs(delta) * this.w[j];
+      this.effort[j] = Math.abs(delta) / dt / (g.flex * g.str * 2 + 1e-6);
+      pw += e;
+    }
+    this.energy += pw; this.power = pw / dt;
+    const oqx = this.qx, oqy = this.qy, nqx = this.nqx, nqy = this.nqy, ndir = this.ndir, m = this.m;
+    this.local(nqx, nqy, ndir);
+    let S = 0, C = 0;
+    for (let i = 0; i < n; i++) { S += m[i] * (oqx[i] * nqy[i] - oqy[i] * nqx[i]); C += m[i] * (oqx[i] * nqx[i] + oqy[i] * nqy[i]); }
+    const thOld = this.th;
+    this.th -= Math.atan2(S, C);
+    const c0 = Math.cos(thOld), s0 = Math.sin(thOld), c1 = Math.cos(this.th), s1 = Math.sin(this.th);
+    const cn = CN * this.visc, ct = CT * this.visc, idt = 1 / dt;
+    let Fx = 0, Fy = 0, Tq = 0, I = 0;
+    for (let i = 0; i < n; i++) {
+      const wox = c0 * oqx[i] - s0 * oqy[i], woy = s0 * oqx[i] + c0 * oqy[i];
+      const wnx = c1 * nqx[i] - s1 * nqy[i], wny = s1 * nqx[i] + c1 * nqy[i];
+      const vx = this.vx - this.om * wny + (wnx - wox) * idt, vy = this.vy + this.om * wnx + (wny - woy) * idt;
+      const psi = this.th + ndir[i], tc = Math.cos(psi), ts = Math.sin(psi);
+      const vt = vx * tc + vy * ts, vn = -vx * ts + vy * tc;
+      const ft = -ct * vt * this.ar[i], fn = -cn * vn * this.arN[i];
+      const fx = ft * tc - fn * ts, fy = ft * ts + fn * tc;
+      this.fx[i] = fx; this.fy[i] = fy;
+      Fx += fx; Fy += fy; Tq += wnx * fy - wny * fx; I += m[i] * (wnx * wnx + wny * wny);
+    }
+    this.vx = clamp(this.vx + Fx / this.M * dt, -5, 5);
+    this.vy = clamp(this.vy + Fy / this.M * dt, -5, 5);
+    this.om = clamp(this.om + Tq / (I + this.M * 4) * dt, -0.3, 0.3);
+    this.x += this.vx * dt; this.y += this.vy * dt; this.th += this.om * dt;
+    this.rot += Math.abs(this.th - thOld);
+    const od = this.dir;
+    this.qx = nqx; this.qy = nqy; this.dir = ndir; this.nqx = oqx; this.nqy = oqy; this.ndir = od;
+    this.t += dt;
+  }
+}
+
+// ---------------- Tests du labo ----------------
+function makeScenarios(cfg) {
+  return arr(cfg.evo.trials, () => ({ th: rnd(0, 2 * Math.PI), offs: arr(10, () => { const a = rnd(0, 2 * Math.PI), d = rnd(150, 250); return [Math.cos(a) * d, Math.sin(a) * d]; }) }));
+}
+function goalTarget(goal, sim, tx, ty) {
+  if (goal === 'hunt') return [tx, ty];
+  const d = GOAL_DIRS[goal];
+  if (d) return [sim.x + d[0] * 1e4, sim.y + d[1] * 1e4];
+  return [sim.x + Math.cos(sim.th0) * 1e4, sim.y + Math.sin(sim.th0) * 1e4];
+}
+// Un essai : la copie nage seule face à son objectif (cible fixe, proie qui fuit ou prédateur qui la traque)
+class Trial {
+  constructor(g, cfg, sc) {
+    this.sim = new Sim(g, cfg, 0, 0, sc.th); this.cfg = cfg; this.goal = cfg.goal.type; this.sc = sc;
+    this.k = 0; this.eaten = 0; this.t = 0; this.done = false; this.caught = false;
+    const o = sc.offs[0]; this.tx = o[0]; this.ty = o[1]; this.d0 = Math.hypot(o[0], o[1]); this.dmin = this.d0;
+    if (this.goal === 'survive') { this.ex = -o[0] * 1.5; this.ey = -o[1] * 1.5; }
+  }
+  next() { this.k++; const o = this.sc.offs[this.k % this.sc.offs.length]; this.tx = this.sim.x + o[0]; this.ty = this.sim.y + o[1]; this.d0 = Math.hypot(o[0], o[1]); this.dmin = this.d0; }
+  step(dt) {
+    if (this.done) return;
+    const s = this.sim, goal = this.goal;
+    if (goal === 'hunt' || goal === 'survive' || goal === 'predator') {
+      if (goal === 'predator') { // la proie fuit en zigzag
+        const a = Math.atan2(this.ty - s.y, this.tx - s.x) + Math.sin(this.t * 0.05 + this.k) * 0.9;
+        const d = Math.hypot(this.tx - s.x, this.ty - s.y), v = d < 140 ? 1.1 : 0;
+        this.tx += Math.cos(a) * v * dt; this.ty += Math.sin(a) * v * dt;
+      }
+      if (goal === 'survive') {
+        if (this.t > 40) { const a = Math.atan2(s.y - this.ey, s.x - this.ex); this.ex += Math.cos(a) * 1.35 * dt; this.ey += Math.sin(a) * 1.35 * dt; }
+        s.step(this.tx, this.ty, dt, 1, this.ex, this.ey);
+        if (Math.hypot(this.ex - s.x, this.ey - s.y) < 20) { this.caught = true; this.done = true; }
+      } else s.step(this.tx, this.ty, dt, 1);
+      const d = Math.hypot(this.tx - s.x, this.ty - s.y);
+      if (d < this.dmin) this.dmin = d;
+      if (d < 18) { this.eaten++; this.next(); }
+    } else {
+      const [tx, ty] = goalTarget(goal, s);
+      s.step(tx, ty, dt, 1);
+    }
+    this.t += dt;
+    if (this.t >= this.cfg.goal.dur) this.done = true;
+  }
+  score() {
+    const s = this.sim, g = this.goal, close = 100 * Math.max(0, 1 - this.dmin / this.d0);
+    let sc;
+    if (g === 'hunt') sc = this.eaten * 100 + close;
+    else if (g === 'predator') sc = this.eaten * 150 + close;
+    else if (g === 'survive') sc = this.eaten * 80 + this.t * 0.25 + (this.caught ? 0 : 100);
+    else if (g === 'speed') sc = Math.hypot(s.x, s.y) / 4;
+    else if (g === 'spin') sc = s.rot * 8;
+    else sc = Math.max(0, s.x * GOAL_DIRS[g][0] + s.y * GOAL_DIRS[g][1]) / 4;
+    return sc - s.energy * 0.0015 * this.cfg.goal.energyCost;
+  }
+  label() {
+    const g = this.goal, s = this.sim;
+    if (g === 'hunt') return `${this.eaten} 🦐`;
+    if (g === 'predator') return `${this.eaten} proies`;
+    if (g === 'survive') return `${this.eaten} 🦐 · ${this.caught ? '💀 attrapé' : 'en vie'}`;
+    if (g === 'spin') return `${(s.rot / (2 * Math.PI)).toFixed(1)} tours`;
+    if (g === 'speed') return `${Math.round(Math.hypot(s.x, s.y))} px`;
+    const d = GOAL_DIRS[g]; return `${Math.round(Math.max(0, s.x * d[0] + s.y * d[1]))} px`;
+  }
+}
+function evaluate(g, cfg, sc) {
+  const tr = new Trial(g, cfg, sc);
+  while (!tr.done) tr.step(1);
+  return tr.score();
+}
+
+// ---------------- Moteur d'évolution (tourne dans le worker) ----------------
+class LabEngine {
+  constructor(emit) { this.emit = emit; this.sp = new Map(); this.rr = 0; this.lastProg = 0; }
+  handle(msg) {
+    const s = this.sp.get(msg.id);
+    switch (msg.t) {
+      case 'add': {
+        const cfg = msg.cfg, seeds = (msg.seeds || []).map(g => clampGenome(g, cfg));
+        const ns = { id: msg.id, cfg, gen: msg.gen || 0, evals: msg.evals || 0, running: msg.running !== false, pop: [], lastSorted: null };
+        for (let i = 0; i < cfg.evo.pop; i++) ns.pop.push(seeds.length ? (i < seeds.length ? seeds[i] : mutateG(cloneG(seeds[i % seeds.length]), cfg)) : randGenome(cfg));
+        this.startGen(ns); this.sp.set(msg.id, ns); break;
+      }
+      case 'cfg': if (s) { s.cfg = msg.cfg; s.pop.forEach(g => clampGenome(g, s.cfg)); if (s.lastSorted) s.lastSorted.forEach(g => clampGenome(g, s.cfg)); this.startGen(s); } break;
+      case 'run': if (s) s.running = msg.on; break;
+      case 'remove': this.sp.delete(msg.id); break;
+      case 'top': this.emit({ t: 'reply', req: msg.req, data: s ? (s.lastSorted || s.pop).slice(0, msg.n) : [] }); break;
+      case 'snapshot': this.emit({ t: 'reply', req: msg.req, data: [...this.sp.values()].map(x => ({ id: x.id, gen: x.gen, evals: x.evals, seeds: (x.lastSorted || x.pop).slice(0, 60) })) }); break;
+    }
+  }
+  startGen(s) { s.scen = makeScenarios(s.cfg); s.idx = 0; s.scores = new Float64Array(s.pop.length); }
+  tick(budget) {
+    const list = [...this.sp.values()].filter(s => s.running);
+    if (!list.length) return false;
+    const t0 = performance.now();
+    while (performance.now() - t0 < budget) {
+      const s = list[this.rr++ % list.length];
+      for (let k = 0; k < 3; k++) this.evalOne(s);
+    }
+    if (t0 - this.lastProg > 200) { this.lastProg = t0; this.emit({ t: 'progress', items: list.map(s => ({ id: s.id, idx: s.idx, size: s.pop.length })) }); }
+    return true;
+  }
+  evalOne(s) {
+    const g = s.pop[s.idx]; let sum = 0;
+    for (const sc of s.scen) sum += evaluate(g, s.cfg, sc);
+    s.scores[s.idx] = sum / s.scen.length; s.idx++; s.evals++;
+    if (s.idx >= s.pop.length) this.finishGen(s);
+  }
+  finishGen(s) {
+    const order = [...s.pop.keys()].sort((i, j) => s.scores[j] - s.scores[i]);
+    const sorted = order.map(i => s.pop[i]), N = sorted.length, cfg = s.cfg, b = cfg.body;
+    const mean = f => sorted.reduce((a, g) => a + f(g), 0) / N;
+    const std = (f, range) => { const m = mean(f); return Math.sqrt(mean(g => (f(g) - m) ** 2)) / (range || 1); };
+    const stats = {
+      vert: mean(g => g.nSeg), str: mean(g => g.str), neur: mean(g => g.brain.active.reduce((a, v) => a + v, 0)),
+      len: mean(g => g.nSeg * g.segLen),
+      div: 100 * (std(g => g.nSeg, b.segMax - b.segMin + 1) + std(g => g.segLen, b.lenMax - b.lenMin + 1) + std(g => g.str, b.strMax) + std(g => g.flex, b.flexMax) + std(g => g.freq, b.freqMax) + std(g => g.brain.W[0][0] + g.brain.W[0][5], 3)) / 6,
+    };
+    let avg = 0; for (let i = 0; i < N; i++) avg += s.scores[i]; avg /= N;
+    this.emit({ t: 'gen', id: s.id, gen: s.gen, best: s.scores[order[0]], avg, champ: sorted[0], stats, evals: s.evals });
+    s.lastSorted = sorted.slice(0, 60);
+    const size = cfg.evo.pop, next = [], elite = Math.max(1, Math.round(size * cfg.evo.elite));
+    for (let i = 0; i < Math.min(elite, N); i++) next.push(sorted[i]);
+    const pick = () => { let best = Math.floor(Math.random() * N); for (let k = 0; k < 3; k++) { const c = Math.floor(Math.random() * N); if (c < best) best = c; } return sorted[best]; };
+    while (next.length < size) {
+      const p = pick();
+      next.push(mutateG(cfg.evo.crossover && Math.random() < 0.4 ? crossoverG(p, pick()) : cloneG(p), cfg));
+    }
+    s.pop = next; s.gen++;
+    this.startGen(s);
+  }
+}
+
+</script>
+<script>
+// =====================================================================
+//  ÉTAT GLOBAL
+// =====================================================================
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('fr-FR');
+const OW = 9000, OH = 5200;              // taille de l'océan
+const POS = '#e76624', NEG = '#338ced';  // couleurs divergentes (activation +/-)
+
+const App = {
+  species: [],
+  timeScale: 1,
+  ov: { trails: false, forces: false, muscles: false, vision: false, xray: false, labels: true },
+  selSp: null, selCr: null, follow: false,
+};
+
+// =====================================================================
+//  WORKER DU LABO (l'évolution tourne en parallèle, sans ralentir l'océan)
+// =====================================================================
+let worker = null, fallback = null, reqId = 1;
+const pending = new Map();
+function send(msg) { if (worker) worker.postMessage(msg); else fallback.handle(structuredClone(msg)); }
+function request(msg) {
+  return new Promise(res => {
+    const req = reqId++; pending.set(req, res);
+    send({ ...msg, req });
+    setTimeout(() => { if (pending.has(req)) { pending.delete(req); res(null); } }, 4000);
+  });
+}
+function onEngine(m) {
+  if (m.t === 'reply') { const r = pending.get(m.req); if (r) { pending.delete(m.req); r(m.data); } return; }
+  if (m.t === 'progress') { for (const it of m.items) { const sp = spById(it.id); if (sp) sp.progress = it.idx / it.size; } return; }
+  if (m.t === 'gen') onGeneration(m);
+}
+(function startWorker() {
+  try {
+    const src = $('core').textContent + `
+      const E = new LabEngine(m => postMessage(m));
+      onmessage = e => E.handle(e.data);
+      (function loop() { const busy = E.tick(30); setTimeout(loop, busy ? 0 : 50); })();`;
+    worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+    worker.onmessage = e => onEngine(e.data);
+    worker.onerror = () => { worker = null; fallback = new LabEngine(onEngine); App.species.forEach(resendSpecies); };
+  } catch (e) { worker = null; fallback = new LabEngine(onEngine); }
+})();
+
+// =====================================================================
+//  ESPÈCES
+// =====================================================================
+const spById = id => App.species.find(s => s.id === id);
+const GENERA = ['Anguilla', 'Piscis', 'Draco', 'Abyssus', 'Nereis', 'Vermis', 'Lampra', 'Myxo', 'Squalus', 'Gyrinus', 'Cephalo', 'Thalasso'];
+const EPITHETS = ['velox', 'primordia', 'luminosa', 'profunda', 'audax', 'serpentina', 'minima', 'gigantea', 'curiosa', 'rapax', 'tenebris', 'aurora'];
+const randomName = () => GENERA[Math.floor(Math.random() * GENERA.length)] + ' ' + EPITHETS[Math.floor(Math.random() * EPITHETS.length)];
+
+function createSpecies(cfg, opts = {}) {
+  const sp = {
+    id: opts.id || newId(), cfg, gen: opts.gen || 0, evals: opts.evals || 0, running: opts.running !== false,
+    history: opts.history || [], champs: (opts.champs || []).map(e => ({ ...e, g: clampGenome(e.g, cfg) })), log: opts.log || [], progress: 0,
+    champ: null, record: opts.record || 0,
+    lastVert: opts.lastVert || 0, lastNeur: opts.lastNeur || 0, seeds: opts.seeds || [],
+  };
+  if (sp.champs.length) sp.champ = sp.champs[sp.champs.length - 1].g;
+  App.species.push(sp);
+  resendSpecies(sp);
+  if (!sp.log.length) addLog(sp, `🌱 Apparition de l'espèce (${GOALS[cfg.goal.type]})`);
+  renderSpeciesList();
+  return sp;
+}
+function resendSpecies(sp) { send({ t: 'add', id: sp.id, cfg: sp.cfg, seeds: sp.seeds, gen: sp.gen, evals: sp.evals, running: sp.running }); }
+function addLog(sp, msg) { sp.log.unshift(`<b>Gén ${sp.gen}</b> · ${msg}`); if (sp.log.length > 80) sp.log.length = 80; if (sp === App.selSp) dirty.sp = true; }
+
+function stageName(n) {
+  if (n <= 3) return '🪱 Proto-ver';
+  if (n <= 5) return '🐛 Larve nageuse';
+  if (n <= 8) return '🐟 Poisson primitif';
+  if (n <= 11) return '🐠 Poisson vertébré';
+  if (n <= 15) return '🐍 Anguille';
+  if (n <= 19) return '🐉 Serpent de mer';
+  return '🌊 Léviathan';
+}
+
+function onGeneration(m) {
+  const sp = spById(m.id); if (!sp) return;
+  sp.gen = m.gen + 1; sp.evals = m.evals; sp.champ = m.champ;
+  const st = m.stats;
+  sp.history.push({ gen: m.gen, best: Math.max(0, m.best), avg: Math.max(0, m.avg), vert: st.vert, str: st.str, neur: st.neur, div: st.div, len: st.len });
+  if (sp.history.length > 600) sp.history = sp.history.filter((_, i) => i % 2 === 0 || i > 400);
+  sp.champs.push({ gen: m.gen, g: m.champ, score: m.best });
+  if (sp.champs.length > 240) sp.champs = sp.champs.filter((_, i) => i === 0 || i % 2 === 1 || i > 180);
+  const c = m.champ, neur = c.brain.active.reduce((a, v) => a + v, 0);
+  if (sp.lastVert && c.nSeg !== sp.lastVert) {
+    addLog(sp, c.nSeg > sp.lastVert ? `🦴 Mutation gagnante : le champion a ${c.nSeg} vertèbres` : `🦴 Le champion perd une vertèbre (${c.nSeg}), c'était plus efficace`);
+    if (stageName(c.nSeg) !== stageName(sp.lastVert)) addLog(sp, `✨ Nouveau stade : ${stageName(c.nSeg)}`);
+  }
+  if (sp.cfg.brain.neurogenesis && sp.lastNeur && neur !== sp.lastNeur) addLog(sp, neur > sp.lastNeur ? `🧠 Neurogenèse : le champion a ${neur} neurones` : `🧠 Cerveau simplifié : ${neur} neurones`);
+  sp.lastVert = c.nSeg; sp.lastNeur = neur;
+  if (m.best > sp.record * 1.15 && m.best > 10) { addLog(sp, `🏆 Record : ${fmt(m.best)} points`); sp.record = m.best; }
+  dirty.list = true; if (sp === App.selSp) { dirty.sp = true; if (Tank.followLatest) Tank.pendingReset = true; }
+}
+
+// =====================================================================
+//  LES MONDES : l'océan géant et l'arène des duels
+// =====================================================================
+function floorY(x) { return 5200 - 230 + 70 * Math.sin(x / 900) + 38 * Math.sin(x / 310 + 2) + 14 * Math.sin(x / 97); }
+const CELL = 256;
+class World {
+  constructor(kind, W, H) {
+    this.kind = kind; this.W = W; this.H = H;
+    this.creatures = []; this.food = []; this.grid = []; this.cgrid = [];
+    this.GW = Math.ceil(W / CELL); this.GH = Math.ceil(H / CELL);
+    this.settings = { foodTarget: kind === 'ocean' ? 900 : 60, repro: kind === 'ocean', cap: 400, visc: 1, predation: true };
+    this.cam = { x: W / 2, y: kind === 'ocean' ? 1400 : H / 2, z: kind === 'ocean' ? 0.45 : 0.5 };
+    this.births = 0; this.deaths = 0; this.kills = 0;
+    this.patches = kind === 'ocean' ? arr(14, () => ({ x: rnd(400, W - 400), y: rnd(300, H - 600), vx: rnd(-0.15, 0.15), vy: rnd(-0.08, 0.08), r: rnd(180, 420) })) : [];
+  }
+  floor(x) { return this.kind === 'ocean' ? floorY(x) : this.H - 10; }
+}
+App.ocean = new World('ocean', 9000, 5200);
+App.arena = null; App.view = 'ocean';
+Object.defineProperty(App, 'world', { get() { return App.view === 'arena' && App.arena ? App.arena : App.ocean; } });
+for (const k of ['creatures', 'food', 'settings', 'cam', 'births', 'deaths'])
+  Object.defineProperty(App, k, { get() { return App.world[k]; }, set(v) { App.world[k] = v; } });
+
+function spawnFood(w = App.world) {
+  let x, y;
+  if (w.patches.length && Math.random() < 0.7) { const p = w.patches[Math.floor(Math.random() * w.patches.length)]; x = p.x + gauss() * p.r; y = p.y + gauss() * p.r * 0.6; }
+  else { x = rnd(50, w.W - 50); y = rnd(60, w.H - (w.kind === 'ocean' ? 300 : 60)); }
+  x = clamp(x, 30, w.W - 30); y = clamp(y, 40, w.floor(x) - 30);
+  const f = { x, y, alive: true, ph: Math.random() * 6 };
+  w.food.push(f); gridAdd(w, f);
+}
+function gridAdd(w, f) { const i = clamp(Math.floor(f.x / CELL), 0, w.GW - 1) + clamp(Math.floor(f.y / CELL), 0, w.GH - 1) * w.GW; (w.grid[i] || (w.grid[i] = [])).push(f); }
+function rebuildGrid(w = App.world) {
+  w.food = w.food.filter(f => f.alive); w.grid = new Array(w.GW * w.GH); for (const f of w.food) gridAdd(w, f);
+  w.cgrid = new Array(w.GW * w.GH);
+  for (const c of w.creatures) { const i = clamp(Math.floor(c.sim.x / CELL), 0, w.GW - 1) + clamp(Math.floor(c.sim.y / CELL), 0, w.GH - 1) * w.GW; (w.cgrid[i] || (w.cgrid[i] = [])).push(c); }
+}
+function scanGrid(w, g, x, y, maxR, test) {
+  const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL), R = Math.ceil(maxR / CELL);
+  let best = null, bd = maxR * maxR;
+  for (let j = cy - R; j <= cy + R; j++) { if (j < 0 || j >= w.GH) continue;
+    for (let i = cx - R; i <= cx + R; i++) { if (i < 0 || i >= w.GW) continue;
+      const cell = g[i + j * w.GW]; if (!cell) continue;
+      for (const o of cell) { if (!test(o)) continue; const ox = o.sim ? o.sim.x : o.x, oy = o.sim ? o.sim.y : o.y, d = (ox - x) ** 2 + (oy - y) ** 2; if (d < bd) { bd = d; best = o; } } } }
+  return best ? { o: best, d: Math.sqrt(bd) } : null;
+}
+const nearestFood = (w, x, y, r) => { const h = scanGrid(w, w.grid, x, y, r, f => f.alive); return h && h.o; };
+const isMeatEater = c => c.sp.cfg.diet === 'carnivore' || c.sp.cfg.diet === 'omnivore';
+const canEat = (pred, prey) => prey !== pred && prey.alive && (pred.side !== undefined ? pred.side !== prey.side : prey.sp !== pred.sp) && !prey.immortal && !(prey.grace > 0) && prey.sim.M <= pred.sim.M * 1.6;
+
+let cidN = 1;
+function spawnCreature(g, sp, x, y, extra = {}, w = App.world) {
+  const sim = new Sim(g, sp.cfg, x, y, extra.th ?? rnd(0, 2 * Math.PI), w.settings.visc);
+  const c = { sim, sp, id: cidN++, energy: extra.energy ?? 100, age: 0, eaten: extra.eaten || 0, kills: extra.kills || 0, kids: 0, ogen: extra.ogen || 0,
+    labGen: extra.labGen ?? sp.gen, trail: [], target: null, retarget: 0, wander: null, danger: null, powerHist: [], alive: true, born: performance.now(),
+    sterile: !!extra.sterile, immortal: !!extra.immortal, grace: extra.grace || 0, specId: extra.specId, side: extra.side, name: extra.name };
+  w.creatures.push(c);
+  return c;
+}
+const particles = [];
+function burst(x, y, color, n, spd = 2) { for (let i = 0; i < n; i++) particles.push({ x, y, vx: rnd(-spd, spd), vy: rnd(-spd, spd), life: 1, color }); }
+function metabolism(c) { return (0.03 + c.sim.M / 25000) * (c.sp.cfg.diet === 'carnivore' ? 0.45 : 1); } // les prédateurs savent jeûner
+
+function worldStep(w, dt) {
+  const S = w.settings;
+  for (const p of w.patches) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.x < 400 || p.x > w.W - 400) p.vx *= -1; if (p.y < 300 || p.y > w.H - 700) p.vy *= -1; }
+  if (w.food.length < S.foodTarget) for (let k = 0; k < Math.ceil(3 * dt); k++) spawnFood(w);
+  const pred = S.predation, list = w.creatures, n0 = list.length;
+  for (let idx = 0; idx < n0; idx++) {
+    const c = list[idx]; if (!c.alive) continue;
+    const s = c.sim, diet = c.sp.cfg.diet;
+    c.retarget -= dt;
+    if (c.retarget <= 0 || !c.target || !c.target.alive) {
+      c.retarget = 12;
+      if (w.targetFn) c.target = w.targetFn(c);
+      else {
+        const food = diet !== 'carnivore' ? scanGrid(w, w.grid, s.x, s.y, 650, f => f.alive) : null;
+        const prey = pred && isMeatEater(c) && !(c.digest > 0) && (diet === 'carnivore' || c.energy < 120) ? scanGrid(w, w.cgrid, s.x, s.y, diet === 'carnivore' ? 1100 : 700, o => canEat(c, o)) : null;
+        const best = food && prey ? (prey.d < food.d * 1.2 ? prey : food) : (food || prey);
+        c.target = best ? best.o : null;
+        if (!c.target) {
+          if (!c.wander || c.age % 300 < dt) { const a = s.th + rnd(-1, 1); c.wander = { x: clamp(s.x + Math.cos(a) * 600, 50, w.W - 50), y: clamp(s.y + Math.sin(a) * 600, 50, w.H - 300), alive: true, fake: true }; }
+          c.target = c.wander;
+        }
+      }
+      // la peur : le prédateur le plus proche
+      const d = pred ? scanGrid(w, w.cgrid, s.x, s.y, 500, o => isMeatEater(o) && canEat(o, c)) : null;
+      c.danger = d ? d.o : null;
+    }
+    const tgt = c.target, tx = tgt.sim ? tgt.sim.x : tgt.x, ty = tgt.sim ? tgt.sim.y : tgt.y;
+    const dg = c.danger && c.danger.alive ? c.danger.sim : null;
+    s.step(tx, ty, dt, clamp(c.energy / 150, 0, 1), dg ? dg.x : undefined, dg ? dg.y : undefined);
+    if (!w.noHunger) c.energy -= (metabolism(c) + s.power * 0.006) * dt;
+    if (c.immortal) c.energy = Math.max(c.energy, 60);
+    c.age += dt; if (c.digest > 0) c.digest -= dt; if (c.grace > 0) c.grace -= dt;
+    if (s.x < 20) { s.x = 20; s.vx = Math.abs(s.vx); } if (s.x > w.W - 20) { s.x = w.W - 20; s.vx = -Math.abs(s.vx); }
+    if (s.y < 15) { s.y = 15; s.vy = Math.abs(s.vy); } const fy = w.floor(s.x) - 15; if (s.y > fy) { s.y = fy; s.vy = -Math.abs(s.vy); }
+    // manger une crevette
+    if (!tgt.fake && !tgt.sim && tgt.alive && Math.hypot(tx - s.x, ty - s.y) < 18 + s.g.headW * 0.5) {
+      tgt.alive = false; c.energy = Math.min(220, c.energy + 38); c.eaten++; c.target = null;
+      burst(tx, ty, '255,170,120', 6, 1.2);
+    }
+    // mordre une proie
+    if (tgt.sim && tgt.alive && pred && canEat(c, tgt)) {
+      const [hx, hy] = s.headPos(), reach = 10 + s.g.headW * 0.6 + tgt.sim.n * tgt.sim.L * 0.3;
+      if (Math.hypot(hx - tx, hy - ty) < reach && Math.random() < 0.6 * Math.min(1, dt * 2)) {
+        tgt.alive = false; tgt.killedBy = c; c.kills++; w.kills++; w.deaths++;
+        c.energy = Math.min(240, c.energy + 45 + tgt.sim.M / 30); c.target = null; c.digest = 250; // digestion : il ne chasse plus pendant un moment
+        burst(tx, ty, '255,70,70', 22, 2.5);
+        if (tgt === App.selCr) { App.selCr = { dead: true, ref: tgt }; App.follow = false; }
+      }
+    }
+    if ((App.ov.trails || c === App.selCr) && (c.age | 0) % 5 === 0 && c.lastTrail !== (c.age | 0)) { c.lastTrail = c.age | 0; c.trail.push(s.x, s.y); if (c.trail.length > 400) c.trail.splice(0, 2); }
+    const meat = diet === 'carnivore', thr = meat ? 210 : 175;
+    if (S.repro && !c.sterile && c.energy > thr && w.creatures.length < S.cap) {
+      c.energy -= meat ? 110 : 85; c.kids++;
+      const child = spawnCreature(mutateG(cloneG(s.g), c.sp.cfg), c.sp, s.x + rnd(-20, 20), s.y + rnd(-20, 20), { energy: 70, ogen: c.ogen + 1, labGen: c.labGen }, w);
+      w.births++; burst(child.sim.x, child.sim.y, '160,255,200', 10, 1.5);
+    }
+    if (!c.immortal && (c.energy <= 0 || c.age > 24000)) {
+      c.alive = false; w.deaths++; burst(s.x, s.y, '200,220,255', 14, 1.6);
+      if (c === App.selCr) { App.selCr = { dead: true, ref: c }; App.follow = false; }
+    }
+  }
+  if (w.creatures.some(c => !c.alive)) { if (w.onDeath) for (const c of w.creatures) if (!c.alive) w.onDeath(c); w.creatures = w.creatures.filter(c => c.alive); }
+  const sc = App.selCr;
+  if (sc && !sc.dead && sc.sim && sc.sp && !sc.tank) { sc.powerHist.push(sc.sim.power); if (sc.powerHist.length > 300) sc.powerHist.shift(); }
+  if (w.onStep) w.onStep(dt);
+}
+
+
+// =====================================================================
+//  CAMÉRA & SOURIS
+// =====================================================================
+const cv = $('ocean'), ctx = cv.getContext('2d');
+let CW = 800, CH = 600, DPR = 1;
+function resize() {
+  const r = $('center').getBoundingClientRect(); DPR = window.devicePixelRatio || 1;
+  CW = r.width; CH = r.height; cv.width = CW * DPR; cv.height = CH * DPR;
+}
+new ResizeObserver(resize).observe($('center'));
+const toWorld = (sx, sy) => [(sx - CW / 2) / App.cam.z + App.cam.x, (sy - CH / 2) / App.cam.z + App.cam.y];
+function zoomAt(sx, sy, f) {
+  const [wx, wy] = toWorld(sx, sy);
+  App.cam.z = clamp(App.cam.z * f, 0.06, 4);
+  App.cam.x = wx - (sx - CW / 2) / App.cam.z; App.cam.y = wy - (sy - CH / 2) / App.cam.z;
+}
+cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+let drag = null;
+cv.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY, cx: App.cam.x, cy: App.cam.y, moved: false }; cv.classList.add('drag'); });
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) { drag.moved = true; App.follow = false; }
+  App.cam.x = drag.cx - dx / App.cam.z; App.cam.y = drag.cy - dy / App.cam.z;
+});
+window.addEventListener('mouseup', e => {
+  if (!drag) return; cv.classList.remove('drag');
+  if (!drag.moved && e.target === cv) {
+    const r = cv.getBoundingClientRect(); const [wx, wy] = toWorld(e.clientX - r.left, e.clientY - r.top);
+    let best = null, bd = (45 / App.cam.z) ** 2;
+    for (const c of App.creatures) { const d = (c.sim.x - wx) ** 2 + (c.sim.y - wy) ** 2; if (d < bd) { bd = d; best = c; } }
+    if (best) selectCreature(best); else if (App.selCr) { App.selCr = null; App.follow = false; dirty.ind = true; }
+  }
+  drag = null;
+});
+cv.addEventListener('dblclick', () => { if (App.selCr && App.selCr.sim) { App.follow = true; App.cam.z = Math.max(App.cam.z, 1.6); } });
+$('zin').onclick = () => zoomAt(CW / 2, CH / 2, 1.4);
+$('zout').onclick = () => zoomAt(CW / 2, CH / 2, 1 / 1.4);
+$('zfit').onclick = () => { App.follow = false; App.cam.z = Math.min(CW / App.world.W, CH / App.world.H) * 0.95; App.cam.x = App.world.W / 2; App.cam.y = App.world.H / 2; };
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || $('modal').classList.contains('show')) return;
+  if (e.key === ' ') { e.preventDefault(); setTime(App.timeScale ? 0 : 1); }
+  if (e.key === '+' || e.key === '=') zoomAt(CW / 2, CH / 2, 1.3);
+  if (e.key === '-') zoomAt(CW / 2, CH / 2, 1 / 1.3);
+  if (e.key === 'f' && App.selCr && App.selCr.sim) App.follow = !App.follow;
+  if (e.key === 'Escape') { App.selCr = null; App.follow = false; dirty.ind = true; }
+});
+
+function selectCreature(c) {
+  App.selCr = c; c.powerHist = c.powerHist || [];
+  if (c.sp && App.selSp !== c.sp && App.species.includes(c.sp)) { App.selSp = c.sp; dirty.list = true; dirty.sp = true; }
+  showTab('ind'); dirty.ind = true;
+}
+
+// minimap
+const mm = $('minimap'), mctx = mm.getContext('2d');
+function mmMove(e) { const r = mm.getBoundingClientRect(); App.follow = false; App.cam.x = (e.clientX - r.left) / r.width * App.world.W; App.cam.y = (e.clientY - r.top) / r.height * App.world.H; }
+let mmDrag = false;
+mm.addEventListener('mousedown', e => { mmDrag = true; mmMove(e); e.stopPropagation(); });
+window.addEventListener('mousemove', e => { if (mmDrag) mmMove(e); });
+window.addEventListener('mouseup', () => { mmDrag = false; });
+
+// =====================================================================
+//  DESSIN
+// =====================================================================
+const seaweed = arr(520, () => { const x = rnd(0, OW); return { x, h: rnd(50, 190), ph: rnd(0, 6), hue: rnd(95, 165), w: rnd(3, 7) }; });
+const corals = arr(160, () => ({ x: rnd(0, OW), hue: [345, 20, 300, 45, 190][Math.floor(Math.random() * 5)], s: rnd(14, 40), br: 3 + Math.floor(Math.random() * 4), seed: Math.random() * 100 }));
+const rocks = arr(120, () => ({ x: rnd(0, OW), rx: rnd(25, 110), ry: rnd(15, 60), l: rnd(14, 26) }));
+const jelly = arr(14, () => ({ x: rnd(200, OW - 200), y: rnd(400, OH - 900), ph: rnd(0, 6), s: rnd(14, 30), hue: rnd(260, 330) }));
+function hash(i, j) { let h = (i * 374761393 + j * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+
+function bodyGeom(sim) {
+  const n = sim.n, L = sim.L, c = Math.cos(sim.th), s = Math.sin(sim.th);
+  const P = [], D = [];
+  let x = -sim.cx, y = -sim.cy, phi = 0;
+  P.push([sim.x + c * x - s * y, sim.y + s * x + c * y]);
+  for (let i = 0; i < n; i++) { if (i > 0) phi += sim.a[i]; x -= L * Math.cos(phi); y -= L * Math.sin(phi); P.push([sim.x + c * x - s * y, sim.y + s * x + c * y]); D.push(sim.th + phi); }
+  const HW = [], A = [];
+  for (let k = 0; k <= n; k++) {
+    HW.push((k === 0 ? sim.w[0] * 0.8 : k === n ? sim.w[n - 1] * 0.45 : (sim.w[k - 1] + sim.w[k]) / 2) * 0.58);
+    A.push(k === 0 ? D[0] : k === n ? D[n - 1] : (D[k - 1] + D[k]) / 2);
+  }
+  return { P, D, HW, A, n };
+}
+
+function drawCreature(c2, sim, o = {}) {
+  const g = sim.g, hue = g.hue, z = o.z || 1, alpha = o.alpha ?? 1, pattern = o.pattern || 'none';
+  const { P, D, HW, A, n } = bodyGeom(sim);
+  c2.save(); c2.globalAlpha = alpha;
+  if (o.lod) {
+    c2.strokeStyle = `hsl(${hue},65%,55%)`; c2.lineWidth = Math.max(g.headW * 0.9, 2.2 / z); c2.lineCap = 'round';
+    c2.beginPath(); c2.moveTo(P[0][0], P[0][1]); for (let k = 1; k <= n; k += 2) c2.lineTo(P[k][0], P[k][1]); c2.lineTo(P[n][0], P[n][1]); c2.stroke();
+    c2.restore(); return;
+  }
+  const xr = o.xray;
+  const L = [], R = [];
+  for (let k = 0; k <= n; k++) { const nx = -Math.sin(A[k]), ny = Math.cos(A[k]); L.push([P[k][0] + nx * HW[k], P[k][1] + ny * HW[k]]); R.push([P[k][0] - nx * HW[k], P[k][1] - ny * HW[k]]); }
+  if (o.glow) { c2.shadowColor = `hsla(${hue},90%,65%,.9)`; c2.shadowBlur = 18; }
+  // nageoire caudale
+  const tl = P[n], ta = D[n - 1], bx = -Math.cos(ta), by = -Math.sin(ta), tnx = -Math.sin(ta), tny = Math.cos(ta);
+  const fl = 4 + g.fin * 7, fs = 3 + g.fin * 7;
+  c2.fillStyle = `hsla(${hue + 25},75%,${xr ? 70 : 62}%,${xr ? 0.25 : 0.85})`;
+  c2.beginPath(); c2.moveTo(tl[0], tl[1]);
+  c2.lineTo(tl[0] + bx * fl + tnx * fs, tl[1] + by * fl + tny * fs); c2.lineTo(tl[0] + bx * fl * 0.55, tl[1] + by * fl * 0.55);
+  c2.lineTo(tl[0] + bx * fl - tnx * fs, tl[1] + by * fl - tny * fs); c2.closePath(); c2.fill();
+  // nageoires pectorales
+  if (n > 1 && g.pect > 0.15) {
+    const k = 1, nx = -Math.sin(A[k]), ny = Math.cos(A[k]), sz = 3 + g.pect * 5;
+    for (const sg of [1, -1]) { c2.beginPath(); c2.ellipse(P[k][0] + nx * HW[k] * sg - Math.cos(A[k]) * 2, P[k][1] + ny * HW[k] * sg - Math.sin(A[k]) * 2, sz, sz * 0.42, A[k] + sg * 0.7 + Math.PI, 0, 7); c2.fill(); }
+  }
+  // corps
+  if (pattern === 'gradient' && !xr) { const gr = c2.createLinearGradient(P[0][0], P[0][1], P[n][0], P[n][1]); gr.addColorStop(0, `hsl(${hue},65%,52%)`); gr.addColorStop(1, `hsl(${hue + 50},70%,45%)`); c2.fillStyle = gr; }
+  else c2.fillStyle = xr ? `hsla(${hue},50%,60%,.18)` : `hsl(${hue},62%,48%)`;
+  c2.beginPath(); c2.moveTo(L[0][0], L[0][1]);
+  for (let k = 1; k <= n; k++) c2.lineTo(L[k][0], L[k][1]);
+  for (let k = n; k >= 0; k--) c2.lineTo(R[k][0], R[k][1]);
+  c2.closePath(); c2.fill();
+  c2.beginPath(); c2.arc(P[0][0], P[0][1], HW[0], 0, 7); c2.fill();
+  c2.shadowBlur = 0;
+  if (!xr && pattern === 'stripes') {
+    c2.strokeStyle = `hsla(${hue},60%,25%,.55)`; c2.lineWidth = Math.max(1, sim.L * 0.3);
+    for (let k = 1; k < n; k += 1) { if (k % 2) continue; c2.beginPath(); c2.moveTo(L[k][0], L[k][1]); c2.lineTo(R[k][0], R[k][1]); c2.stroke(); }
+  } else if (!xr && pattern === 'spots') {
+    c2.fillStyle = `hsla(${hue + 40},80%,80%,.6)`;
+    for (let k = 1; k < n; k += 2) { const nx = -Math.sin(A[k]), ny = Math.cos(A[k]); c2.beginPath(); c2.arc(P[k][0] + nx * HW[k] * 0.4, P[k][1] + ny * HW[k] * 0.4, HW[k] * 0.28, 0, 7); c2.fill(); }
+  }
+  // muscles (chaleur)
+  if (o.muscles) {
+    for (let i = 1; i < n; i++) {
+      const e = clamp(sim.effort[i] * 1.2, 0, 1); if (e < 0.03) continue;
+      c2.fillStyle = `rgba(255,${Math.round(150 - 100 * e)},40,${0.15 + 0.7 * e})`;
+      c2.beginPath(); c2.moveTo(L[i][0], L[i][1]); c2.lineTo(L[i + 1][0], L[i + 1][1]); c2.lineTo(R[i + 1][0], R[i + 1][1]); c2.lineTo(R[i][0], R[i][1]); c2.closePath(); c2.fill();
+      c2.beginPath(); c2.moveTo(L[i - 1][0], L[i - 1][1]); c2.lineTo(L[i][0], L[i][1]); c2.lineTo(R[i][0], R[i][1]); c2.lineTo(R[i - 1][0], R[i - 1][1]); c2.closePath(); c2.fill();
+    }
+  }
+  // colonne vertébrale
+  c2.strokeStyle = xr ? `hsla(${hue},80%,85%,.95)` : `hsla(${hue},40%,88%,.45)`; c2.lineWidth = xr ? 2 : 1.2;
+  c2.beginPath(); c2.moveTo(P[0][0], P[0][1]); for (let k = 1; k <= n; k++) c2.lineTo(P[k][0], P[k][1]); c2.stroke();
+  c2.fillStyle = xr ? '#fff' : `hsla(${hue},30%,95%,.9)`;
+  for (let k = 1; k < n; k++) { c2.beginPath(); c2.arc(P[k][0], P[k][1], xr ? 2.8 : 1.9, 0, 7); c2.fill(); }
+  if (xr) { // crâne + nerfs
+    c2.strokeStyle = 'rgba(255,255,255,.8)'; c2.lineWidth = 1.5; c2.beginPath(); c2.arc(P[0][0], P[0][1], HW[0] * 0.7, 0, 7); c2.stroke();
+    c2.strokeStyle = 'rgba(120,220,255,.5)'; c2.lineWidth = 0.8;
+    for (let k = 1; k < n; k++) { const nx = -Math.sin(A[k]), ny = Math.cos(A[k]); c2.beginPath(); c2.moveTo(P[k][0] + nx * HW[k] * 0.9, P[k][1] + ny * HW[k] * 0.9); c2.lineTo(P[k][0] - nx * HW[k] * 0.9, P[k][1] - ny * HW[k] * 0.9); c2.stroke(); }
+  }
+  // yeux
+  const ha = D[0], hw = HW[0], fx = Math.cos(ha), fy = Math.sin(ha), nx = -fy, ny = fx, er = Math.max(1.6, hw * 0.4);
+  for (const sg of [1, -1]) {
+    const ex = P[0][0] + fx * hw * 0.35 + nx * hw * 0.5 * sg, ey = P[0][1] + fy * hw * 0.35 + ny * hw * 0.5 * sg;
+    c2.fillStyle = '#fff'; c2.beginPath(); c2.arc(ex, ey, er, 0, 7); c2.fill();
+    c2.fillStyle = '#111'; c2.beginPath(); c2.arc(ex + fx * er * 0.35, ey + fy * er * 0.35, er * 0.5, 0, 7); c2.fill();
+  }
+  if (o.diet === 'carnivore' || o.diet === 'omnivore') { // mâchoires
+    const jl = hw * 0.9 + 3, open = 0.35 + 0.15 * Math.sin(sim.t * 0.3);
+    c2.fillStyle = o.diet === 'carnivore' ? '#f2f2f2' : '#e8d9b0'; c2.strokeStyle = '#7a1f1f'; c2.lineWidth = 0.8;
+    for (const sg of [1, -1]) {
+      const bx2 = P[0][0] + fx * hw * 0.6 + nx * hw * 0.3 * sg, by2 = P[0][1] + fy * hw * 0.6 + ny * hw * 0.3 * sg, a2 = ha + open * sg;
+      c2.beginPath(); c2.moveTo(bx2, by2); c2.lineTo(bx2 + Math.cos(a2) * jl, by2 + Math.sin(a2) * jl); c2.lineTo(bx2 + Math.cos(a2 - 0.5 * sg) * jl * 0.45 - nx * sg * 1.5, by2 + Math.sin(a2 - 0.5 * sg) * jl * 0.45 - ny * sg * 1.5); c2.closePath(); c2.fill(); c2.stroke();
+    }
+  }
+  if (o.star) { c2.fillStyle = '#ffd34d'; c2.font = `${Math.max(8, hw * 1.4)}px serif`; c2.textAlign = 'center'; c2.fillText('⭐', P[0][0], P[0][1] - hw * 1.8 - 4); }
+  // forces de l'eau
+  if (o.forces) {
+    c2.lineWidth = 1.4 / z; c2.strokeStyle = '#7ff7ff'; c2.fillStyle = '#7ff7ff';
+    for (let i = 0; i < n; i++) {
+      const mx = (P[i][0] + P[i + 1][0]) / 2, my = (P[i][1] + P[i + 1][1]) / 2, fm = Math.hypot(sim.fx[i], sim.fy[i]);
+      const len = Math.min(35, fm / sim.arN[i] * 30); if (len < 1.5) continue;
+      const ex = mx + sim.fx[i] / fm * len, ey = my + sim.fy[i] / fm * len;
+      c2.beginPath(); c2.moveTo(mx, my); c2.lineTo(ex, ey); c2.stroke();
+      const an = Math.atan2(ey - my, ex - mx), hs = Math.min(5, len * 0.4);
+      c2.beginPath(); c2.moveTo(ex, ey); c2.lineTo(ex - Math.cos(an - 0.5) * hs, ey - Math.sin(an - 0.5) * hs); c2.lineTo(ex - Math.cos(an + 0.5) * hs, ey - Math.sin(an + 0.5) * hs); c2.fill();
+    }
+  }
+  c2.restore();
+}
+
+function drawShrimp(c2, f, z, t) {
+  const bob = Math.sin(t / 400 + f.ph) * 2;
+  if (z < 0.35) { c2.fillStyle = 'rgba(255,150,100,.85)'; c2.beginPath(); c2.arc(f.x, f.y, Math.max(3, 1.6 / z), 0, 7); c2.fill(); return; }
+  c2.save(); c2.translate(f.x, f.y + bob); c2.rotate(Math.sin(t / 700 + f.ph) * 0.3);
+  c2.fillStyle = 'rgba(255,120,80,.18)'; c2.beginPath(); c2.arc(0, 0, 11, 0, 7); c2.fill();
+  c2.strokeStyle = '#ff8a5c'; c2.lineWidth = 3.2; c2.lineCap = 'round';
+  c2.beginPath(); c2.arc(0, 0, 5, Math.PI * 0.1, Math.PI * 1.25); c2.stroke();
+  c2.lineWidth = 0.7; c2.strokeStyle = '#ffc2a8';
+  c2.beginPath(); c2.moveTo(4.5, 1.5); c2.quadraticCurveTo(10, -3, 13, 2); c2.stroke();
+  c2.fillStyle = '#ff8a5c'; c2.beginPath(); c2.moveTo(-3.6, -3.6); c2.lineTo(-7.5, -5); c2.lineTo(-6, -1.5); c2.fill();
+  c2.restore();
+}
+
+function renderArenaBg(w, t, z) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#050a14'; ctx.fillRect(0, 0, CW, CH);
+  ctx.setTransform(DPR * z, 0, 0, DPR * z, DPR * (CW / 2 - w.cam.x * z), DPR * (CH / 2 - w.cam.y * z));
+  const g = ctx.createRadialGradient(w.W / 2, w.H / 2, 100, w.W / 2, w.H / 2, w.W * 0.7);
+  g.addColorStop(0, '#12476e'); g.addColorStop(1, '#071d36'); ctx.fillStyle = g; ctx.fillRect(0, 0, w.W, w.H);
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1 / z;
+  for (let x = 0; x <= w.W; x += 100) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, w.H); ctx.stroke(); }
+  for (let y = 0; y <= w.H; y += 100) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w.W, y); ctx.stroke(); }
+  const A = w.duel;
+  if (A) {
+    ctx.fillStyle = `hsla(${A.sides[0].hue},70%,50%,.08)`; ctx.fillRect(0, 0, 260, w.H);
+    ctx.fillStyle = `hsla(${A.sides[1].hue},70%,50%,.08)`; ctx.fillRect(w.W - 260, 0, 260, w.H);
+    if (A.mode === 'sprint') { for (let y = 0; y < w.H; y += 40) { ctx.fillStyle = (y / 40) % 2 ? '#fff' : '#111'; ctx.fillRect(w.W - 156, y, 12, 40); } }
+  }
+  ctx.strokeStyle = 'rgba(140,210,255,.6)'; ctx.lineWidth = 6; ctx.strokeRect(0, 0, w.W, w.H);
+}
+function renderOcean(t) {
+  const z = App.cam.z, cam = App.cam, W0 = App.world;
+  const sy = y => (y - cam.y) * z + CH / 2, sx = x => (x - cam.x) * z + CW / 2;
+  let x0, y0, x1, y1, vis;
+  [x0, y0] = toWorld(0, 0); [x1, y1] = toWorld(CW, CH); vis = (x, y, m = 200) => x > x0 - m && x < x1 + m && y > y0 - m && y < y1 + m;
+  if (W0.kind === 'arena') renderArenaBg(W0, t, z);
+  else {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // fond selon la profondeur
+  const g = ctx.createLinearGradient(0, sy(0), 0, sy(App.world.H));
+  g.addColorStop(0, '#2b8fc2'); g.addColorStop(0.25, '#145583'); g.addColorStop(0.55, '#0a2e55'); g.addColorStop(1, '#030b1b');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+  if (sy(0) > 0) { const s = ctx.createLinearGradient(0, 0, 0, sy(0)); s.addColorStop(0, '#9fd2f0'); s.addColorStop(1, '#cfeaf7'); ctx.fillStyle = s; ctx.fillRect(0, 0, CW, sy(0)); }
+  // rayons de lumière (plus visibles près de la surface)
+  const [, topW] = toWorld(0, 0); const light = clamp(1 - topW / 2600, 0, 1);
+  if (light > 0.02) for (let i = 0; i < 6; i++) {
+    const x = ((i * 260 - cam.x * z * 0.3) % (CW + 300) + CW + 300) % (CW + 300) - 150 + Math.sin(t / 2500 + i) * 30;
+    ctx.fillStyle = `rgba(190,235,255,${(0.03 + 0.02 * Math.sin(t / 900 + i * 2)) * light})`;
+    ctx.beginPath(); ctx.moveTo(x - 30, Math.max(0, sy(0))); ctx.lineTo(x + 30, Math.max(0, sy(0))); ctx.lineTo(x + 160, CH); ctx.lineTo(x + 40, CH); ctx.fill();
+  }
+  // monde
+  ctx.setTransform(DPR * z, 0, 0, DPR * z, DPR * (CW / 2 - cam.x * z), DPR * (CH / 2 - cam.y * z));
+  // surface
+  if (y0 < 30) { ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2 / z; ctx.beginPath(); for (let x = Math.max(0, x0 - 20); x <= Math.min(App.world.W, x1 + 20); x += 20 / Math.max(z, 0.2)) { const y = Math.sin(x / 60 + t / 600) * 4; x === Math.max(0, x0 - 20) ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); }
+  // plancton (décor)
+  if (z > 0.18) {
+    const C = 220, i0 = Math.floor(x0 / C), i1 = Math.floor(x1 / C), j0 = Math.floor(y0 / C), j1 = Math.floor(y1 / C);
+    ctx.fillStyle = 'rgba(200,235,255,.28)';
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) for (let k = 0; k < 4; k++) {
+      const px = (i + hash(i * 7 + k, j)) * C + Math.sin(t / 1600 + k + i) * 8, py = (j + hash(i, j * 5 + k)) * C + Math.cos(t / 1900 + k + j) * 6;
+      ctx.fillRect(px, py, 1.6 / z, 1.6 / z);
+    }
+  }
+  // méduses (décor)
+  for (const j of jelly) {
+    const jx = j.x + Math.sin(t / 5000 + j.ph) * 80, jy = j.y + Math.sin(t / 1500 + j.ph) * 40; if (!vis(jx, jy)) continue;
+    const pulse = 1 + Math.sin(t / 400 + j.ph) * 0.12;
+    ctx.fillStyle = `hsla(${j.hue},80%,75%,.25)`; ctx.beginPath(); ctx.ellipse(jx, jy, j.s * pulse, j.s * 0.7 / pulse, 0, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = `hsla(${j.hue},80%,80%,.25)`; ctx.lineWidth = 1.2;
+    for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(jx + k * j.s * 0.3, jy); ctx.quadraticCurveTo(jx + k * j.s * 0.3 + Math.sin(t / 500 + k) * 6, jy + j.s, jx + k * j.s * 0.3, jy + j.s * 2); ctx.stroke(); }
+  }
+  // fond marin
+  const fx0 = Math.max(0, x0 - 50), fx1 = Math.min(App.world.W, x1 + 50), stp = Math.max(15, 8 / z);
+  if (y1 > App.world.H - 420) {
+    for (const r of rocks) { if (!vis(r.x, App.world.floor(r.x), 150)) continue; ctx.fillStyle = `hsl(215,12%,${r.l}%)`; ctx.beginPath(); ctx.ellipse(r.x, App.world.floor(r.x) + r.ry * 0.3, r.rx, r.ry, 0, Math.PI, 0); ctx.fill(); }
+    for (const w of seaweed) { const by = App.world.floor(w.x); if (!vis(w.x, by, 200)) continue;
+      ctx.strokeStyle = `hsla(${w.hue},55%,32%,.95)`; ctx.lineWidth = w.w; ctx.lineCap = 'round';
+      const sway = Math.sin(t / 1300 + w.ph) * 20; ctx.beginPath(); ctx.moveTo(w.x, by); ctx.quadraticCurveTo(w.x - sway, by - w.h / 2, w.x + sway, by - w.h); ctx.stroke(); }
+    for (const c of corals) { const by = App.world.floor(c.x); if (!vis(c.x, by, 100)) continue;
+      ctx.strokeStyle = `hsl(${c.hue},70%,55%)`; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+      for (let b = 0; b < c.br; b++) { const a = -Math.PI / 2 + (b - (c.br - 1) / 2) * 0.45; const ex = c.x + Math.cos(a) * c.s, ey = by + Math.sin(a) * c.s;
+        ctx.beginPath(); ctx.moveTo(c.x, by); ctx.lineTo(ex, ey); ctx.stroke(); ctx.fillStyle = `hsl(${c.hue},80%,70%)`; ctx.beginPath(); ctx.arc(ex, ey, 3, 0, 7); ctx.fill(); } }
+    ctx.fillStyle = '#3b3526'; ctx.beginPath(); ctx.moveTo(fx0, App.world.H + 400);
+    for (let x = fx0; x <= fx1; x += stp) ctx.lineTo(x, App.world.floor(x)); ctx.lineTo(fx1, App.world.H + 400); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(fx0, App.world.H - 60, fx1 - fx0, 500);
+  }
+  }
+  // nourriture
+  for (const f of App.food) if (f.alive && vis(f.x, f.y, 30)) drawShrimp(ctx, f, z, t);
+  // traînées
+  for (const c of App.creatures) {
+    if (!(App.ov.trails || c === App.selCr) || c.trail.length < 4) continue;
+    ctx.strokeStyle = `hsla(${c.sim.g.hue},80%,70%,.35)`; ctx.lineWidth = 1.5 / z; ctx.beginPath(); ctx.moveTo(c.trail[0], c.trail[1]);
+    for (let i = 2; i < c.trail.length; i += 2) ctx.lineTo(c.trail[i], c.trail[i + 1]); ctx.lineTo(c.sim.x, c.sim.y); ctx.stroke();
+  }
+  // créatures
+  for (const c of App.creatures) {
+    const s = c.sim; if (!vis(s.x, s.y, s.n * s.L + 40)) continue;
+    const lod = s.n * s.L * z < 14;
+    if (App.ov.vision && c.target && !lod) {
+      const T = c.target.sim || c.target; ctx.strokeStyle = c.target.fake ? 'rgba(255,255,255,.18)' : c.target.sim ? 'rgba(255,80,80,.7)' : 'rgba(255,200,120,.45)';
+      ctx.lineWidth = 1 / z; ctx.setLineDash([5 / z, 5 / z]); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(T.x, T.y); ctx.stroke(); ctx.setLineDash([]);
+      if (c.danger && c.danger.alive) { ctx.strokeStyle = 'rgba(190,120,255,.6)'; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(c.danger.sim.x, c.danger.sim.y); ctx.stroke(); }
+    }
+    drawCreature(ctx, s, { z, lod, glow: c === App.selCr, muscles: App.ov.muscles, xray: App.ov.xray, forces: App.ov.forces, pattern: c.sp.cfg.pattern, diet: c.sp.cfg.diet, star: c.immortal || c.specId, alpha: Math.min(1, (performance.now() - c.born) / 600) });
+  }
+  // sélection
+  const sc = App.selCr;
+  if (sc && sc.sim) {
+    const s = sc.sim, r = s.n * s.L * 0.6 + 20;
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5 / z; ctx.setLineDash([6 / z, 4 / z]);
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // particules
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vx *= 0.95; p.vy *= 0.95; p.life -= 0.025;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.fillStyle = `rgba(${p.color},${p.life})`; ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, 7); ctx.fill();
+  }
+  // étiquettes
+  if (App.ov.labels && z > 0.32) {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    for (const c of App.creatures) { const s = c.sim, X = sx(s.x), Y = sy(s.y) - (s.n * s.L * 0.5 + 16) * z; if (X < -50 || X > CW + 50 || Y < -20 || Y > CH + 20) continue;
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; const txt = (c.name ? '⭐ ' + c.name : c.sp.cfg.name) + (c.ogen ? ' · g' + c.ogen : '') + (c.kills ? ' · ☠' + c.kills : ''); const w = ctx.measureText(txt).width + 10;
+      ctx.fillRect(X - w / 2, Y - 11, w, 15); ctx.fillStyle = '#dfe9f5'; ctx.fillText(txt, X, Y); }
+  }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+function renderMinimap() {
+  mm.style.display = App.view === 'arena' ? 'none' : '';
+  if (App.view === 'arena') return;
+  const W = mm.width, H = mm.height, kx = W / App.world.W, ky = H / App.world.H;
+  const g = mctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1d6a96'); g.addColorStop(1, '#04112a');
+  mctx.fillStyle = g; mctx.fillRect(0, 0, W, H);
+  mctx.fillStyle = '#3b3526'; mctx.beginPath(); mctx.moveTo(0, H); for (let x = 0; x <= App.world.W; x += 150) mctx.lineTo(x * kx, App.world.floor(x) * ky); mctx.lineTo(W, H); mctx.fill();
+  mctx.fillStyle = 'rgba(255,150,100,.5)'; for (let i = 0; i < App.food.length; i += 2) { const f = App.food[i]; mctx.fillRect(f.x * kx, f.y * ky, 1, 1); }
+  for (const c of App.creatures) { mctx.fillStyle = `hsl(${c.sim.g.hue},80%,62%)`; mctx.fillRect(c.sim.x * kx - 1, c.sim.y * ky - 1, 2.5, 2.5); }
+  const [x0, y0] = toWorld(0, 0), [x1, y1] = toWorld(CW, CH);
+  mctx.strokeStyle = '#fff'; mctx.lineWidth = 1; mctx.strokeRect(x0 * kx, y0 * ky, (x1 - x0) * kx, (y1 - y0) * ky);
+}
+
+// =====================================================================
+//  BARRE DU HAUT : temps, calques, réglages de l'océan
+// =====================================================================
+const dirty = { list: true, sp: true, ind: true };
+const SPEEDS = [[0, '⏸'], [0.25, '¼×'], [0.5, '½×'], [1, '1×'], [2, '2×'], [4, '4×'], [8, '8×'], [16, '16×']];
+SPEEDS.forEach(([v, l]) => { const b = document.createElement('button'); b.textContent = l; b.dataset.v = v; b.title = v ? `Vitesse ${l}` : 'Pause (espace)'; b.onclick = () => setTime(v); $('timeGrp').appendChild(b); });
+function setTime(v) { App.timeScale = v; [...$('timeGrp').querySelectorAll('button')].forEach(b => b.classList.toggle('on', +b.dataset.v === v)); }
+setTime(1);
+const OVS = [['labels', '🏷 Noms'], ['trails', '〰 Traînées'], ['vision', '🎯 Cibles'], ['muscles', '💪 Muscles'], ['forces', '➶ Forces de l\'eau'], ['xray', '🦴 Rayons X']];
+OVS.forEach(([k, l]) => { const b = document.createElement('button'); b.textContent = l; b.onclick = () => { App.ov[k] = !App.ov[k]; b.classList.toggle('on', App.ov[k]); }; b.classList.toggle('on', App.ov[k]); $('ovGrp').appendChild(b); });
+
+function buildOceanMenu() {
+  const S = App.settings;
+  $('oceanMenu').innerHTML = `
+    <div class="h" style="margin-bottom:10px">🌊 Réglages de l'océan</div>
+    <div class="kv"><span>Crevettes dans l'océan</span><b id="omFoodV">${S.foodTarget}</b></div><input type="range" id="omFood" min="100" max="3000" step="50" value="${S.foodTarget}">
+    <div class="kv" style="margin-top:8px"><span>Population maximale</span><b id="omCapV">${S.cap}</b></div><input type="range" id="omCap" min="20" max="900" step="10" value="${S.cap}">
+    <div class="kv" style="margin-top:8px"><span>Viscosité de l'eau</span><b id="omViscV">${S.visc}</b></div><input type="range" id="omVisc" min="0.3" max="2" step="0.1" value="${S.visc}">
+    <label class="kv" style="margin-top:10px;cursor:pointer"><span>Reproduction libre (sélection naturelle sauvage)</span><input type="checkbox" id="omRepro" ${S.repro ? 'checked' : ''}></label>
+    <label class="kv" style="cursor:pointer"><span>🦷 Prédation (les carnivores mangent les autres espèces)</span><input type="checkbox" id="omPred" ${S.predation ? 'checked' : ''}></label>
+    <div style="color:var(--muted);font-size:11px;line-height:1.5;margin:8px 0">Dans l'océan, une créature qui mange assez fait des petits (avec mutations). Celle qui ne mange pas meurt. Personne ne note : c'est la nature qui trie. Astuce : lâche les proies d'abord, laisse-les se multiplier, puis les prédateurs.</div>
+    <div id="omPops" style="margin:8px 0"></div>
+    <button class="danger" id="omClear" style="width:100%">Vider l'océan</button>`;
+  $('omFood').oninput = e => { S.foodTarget = +e.target.value; $('omFoodV').textContent = S.foodTarget; };
+  $('omCap').oninput = e => { S.cap = +e.target.value; $('omCapV').textContent = S.cap; };
+  $('omVisc').oninput = e => { S.visc = +e.target.value; $('omViscV').textContent = S.visc; App.ocean.creatures.forEach(c => c.sim.visc = S.visc); };
+  $('omRepro').onchange = e => S.repro = e.target.checked;
+  $('omPred').onchange = e => S.predation = e.target.checked;
+  $('omClear').onclick = () => { if (confirm('Retirer toutes les créatures de l\'océan ?')) { App.ocean.creatures = []; App.selCr = null; dirty.ind = true; } };
+}
+$('oceanBtn').onclick = () => { const m = $('oceanMenu'); if (!m.classList.contains('show')) buildOceanMenu(); m.classList.toggle('show'); };
+document.addEventListener('mousedown', e => { if (!$('oceanMenu').contains(e.target) && e.target !== $('oceanBtn')) $('oceanMenu').classList.remove('show'); });
+
+let toastT = 0;
+function toast(msg) { const t = $('toast'); t.innerHTML = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3500); }
+
+// =====================================================================
+//  PANNEAU GAUCHE : les espèces du labo
+// =====================================================================
+function poseThumb(canvas, g, cfg, label) {
+  const c2 = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+  c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, W, H);
+  if (!g) return;
+  const sim = new Sim(g, cfg, 0, 0, 0);
+  for (let j = 1; j < sim.n; j++) sim.a[j] = g.flex * 0.45 * Math.sin(j * 0.9);
+  sim.local(sim.qx, sim.qy, sim.dir);
+  const { P } = bodyGeom(sim);
+  let mx = 1e9, Mx = -1e9, my = 1e9, My = -1e9; for (const p of P) { mx = Math.min(mx, p[0]); Mx = Math.max(Mx, p[0]); my = Math.min(my, p[1]); My = Math.max(My, p[1]); }
+  const pad = g.headW + g.fin * 7 + 6, k = Math.min((W - 8) / (Mx - mx + pad * 2), (H - 8) / (My - my + pad * 2), 2.2);
+  c2.setTransform(k, 0, 0, k, W / 2 - (mx + Mx) / 2 * k, H / 2 - (my + My) / 2 * k);
+  drawCreature(c2, sim, { pattern: cfg.pattern });
+  c2.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+let listKey = '';
+function cardSub(sp) {
+  const n = App.ocean.creatures.filter(c => c.sp === sp).length, h = sp.history[sp.history.length - 1];
+  return `<span class="chipst ${sp.running ? 'run' : 'ice'}">${sp.running ? '🧬 évolue' : '❄ stockée'}</span> ${GOALS[sp.cfg.goal.type].split(' ')[0]} ${sp.cfg.diet === 'carnivore' ? '🦷' : sp.cfg.diet === 'omnivore' ? '🍽' : ''}<br>
+        Gén ${fmt(sp.gen)} · score ${h ? fmt(h.best) : '–'}<br>🌊 ${n} dans l'océan`;
+}
+function renderSpeciesList() {
+  const box = $('speciesList');
+  const key = App.species.map(s => s.id + ':' + s.running + ':' + s.cfg.name + ':' + s.cfg.pattern).join('|') + '#' + (App.selSp && App.selSp.id);
+  if (key === listKey && box.children.length) { // mise à jour sur place (ne vole pas les clics)
+    App.species.forEach((sp, i) => {
+      const el = box.children[i]; el.querySelector('.sub').innerHTML = cardSub(sp);
+      if (sp.thumbG !== sp.champ) { sp.thumbG = sp.champ; poseThumb(el.querySelector('canvas'), sp.champ, sp.cfg); }
+    });
+    return;
+  }
+  listKey = key;
+  if (!App.species.length) { box.innerHTML = '<div class="placeholder">Aucune espèce.<br>Crée la première !</div>'; return; }
+  box.innerHTML = '';
+  for (const sp of App.species) {
+    const el = document.createElement('div'); el.className = 'card' + (sp === App.selSp ? ' sel' : '');
+    el.innerHTML = `<div class="top"><canvas width="144" height="88"></canvas><div style="min-width:0">
+        <div class="name">${esc(sp.cfg.name)}</div>
+        <div class="sub">${cardSub(sp)}</div></div></div>
+      <div class="bar"><div style="width:${sp.running ? sp.progress * 100 : 0}%"></div></div>
+      <div class="btns"><button data-a="run" title="${sp.running ? 'Stocker (mettre en pause l\'évolution)' : 'Reprendre l\'évolution'}">${sp.running ? '❄' : '🧬'}</button><button data-a="rel" title="Lâcher 12 champions dans l'océan">🌊</button><button data-a="edit" title="Modifier les contraintes">✏</button><button data-a="dup" title="Dupliquer (nouvelle lignée indépendante)">⧉</button><button data-a="exp" title="Exporter en fichier">⬇</button><button data-a="del" title="Supprimer" class="danger">🗑</button></div>`;
+    el.onclick = e => {
+      const a = e.target.dataset.a;
+      if (!a) { App.selSp = sp; showTab('sp'); dirty.sp = true; Tank.pendingReset = true; renderSpeciesList(); return; }
+      e.stopPropagation(); speciesAction(sp, a);
+    };
+    box.appendChild(el);
+    sp.thumbG = sp.champ; poseThumb(el.querySelector('canvas'), sp.champ, sp.cfg);
+  }
+}
+function updateCardBars() {
+  const cards = $('speciesList').querySelectorAll('.card');
+  App.species.forEach((sp, i) => { const b = cards[i] && cards[i].querySelector('.bar div'); if (b) b.style.width = (sp.running ? sp.progress * 100 : 0) + '%'; });
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function speciesAction(sp, a) {
+  if (a === 'run') { sp.running = !sp.running; send({ t: 'run', id: sp.id, on: sp.running }); addLog(sp, sp.running ? '🧬 Sortie du congélateur, l\'évolution reprend' : '❄ Espèce stockée'); spTabFor = null; dirty.sp = true; renderSpeciesList(); }
+  if (a === 'rel') {
+    const top = await request({ t: 'top', id: sp.id, n: 12 });
+    if (!top || !top.length) return toast('Pas encore de génération terminée pour cette espèce.');
+    if (App.view === 'arena') showOcean();
+    const cx = clamp(App.cam.x, 100, App.ocean.W - 100), cy = clamp(App.cam.y, 100, floorY(App.cam.x) - 100);
+    top.forEach(g => spawnCreature(g, sp, clamp(cx + rnd(-380, 380), 40, App.ocean.W - 40), clamp(cy + rnd(-220, 220), 40, floorY(cx) - 40), { labGen: sp.gen, grace: 700 }, App.ocean)); // le temps de se disperser
+    burst(cx, cy, '160,230,255', 30, 3);
+    toast(`🌊 12 champions de <b>${esc(sp.cfg.name)}</b> (gén ${sp.gen}) lâchés dans l'océan`);
+    renderSpeciesList();
+  }
+  if (a === 'edit') openEditor(sp);
+  if (a === 'dup') {
+    const seeds = await request({ t: 'top', id: sp.id, n: 60 });
+    const cfg = structuredClone(sp.cfg); cfg.name = sp.cfg.name + ' II'; cfg.hue = (cfg.hue + 40) % 360;
+    (seeds || []).forEach(g => g.hue = (g.hue + 40) % 360);
+    const ns = createSpecies(cfg, { seeds: seeds || [], gen: sp.gen, history: sp.history.slice(), champs: sp.champs.slice(), log: [] });
+    addLog(ns, `⧉ Nouvelle lignée séparée de ${esc(sp.cfg.name)}`);
+    toast('Lignée dupliquée : les deux vont maintenant évoluer séparément.');
+  }
+  if (a === 'exp') {
+    const seeds = await request({ t: 'top', id: sp.id, n: 100 });
+    const data = { abysse: 1, cfg: sp.cfg, gen: sp.gen, evals: sp.evals, history: sp.history, champs: sp.champs.slice(-60), log: sp.log, seeds: seeds || [] };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    const aEl = document.createElement('a'); aEl.href = url; aEl.download = sp.cfg.name.replace(/\s+/g, '_') + '.abysse.json'; aEl.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  if (a === 'del') {
+    if (!confirm(`Supprimer définitivement l'espèce « ${sp.cfg.name} » et toutes ses créatures ?`)) return;
+    send({ t: 'remove', id: sp.id });
+    App.species = App.species.filter(s => s !== sp);
+    App.ocean.creatures = App.ocean.creatures.filter(c => c.sp !== sp); if (App.arena) App.arena.creatures = App.arena.creatures.filter(c => c.sp !== sp);
+    if (App.selSp === sp) App.selSp = App.species[0] || null;
+    if (App.selCr && App.selCr.sp === sp) App.selCr = null;
+    dirty.sp = dirty.ind = true; renderSpeciesList();
+  }
+}
+$('newSpecies').onclick = () => openEditor(null);
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text()); if (!d.abysse) throw 0;
+    const cfg = Object.assign(defaultCfg(), d.cfg);
+    const sp = createSpecies(cfg, { seeds: d.seeds, gen: d.gen, evals: d.evals, history: d.history, champs: d.champs, log: d.log, running: false });
+    addLog(sp, '⬆ Importée depuis un fichier'); App.selSp = sp; dirty.sp = true; renderSpeciesList(); toast(`Espèce « ${esc(cfg.name)} » importée (stockée, clique 🧬 pour la faire évoluer)`);
+  } catch (err) { toast('Fichier invalide'); }
+  e.target.value = '';
+};
+
+// =====================================================================
+//  PANNEAU DROIT
+// =====================================================================
+function showTab(t) { document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); $('tab-sp').classList.toggle('show', t === 'sp'); $('tab-ind').classList.toggle('show', t === 'ind'); $('tab-spec').classList.toggle('show', t === 'spec'); App.tab = t; if (t === 'spec') renderSpecimens(); dirty[t] = true; }
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+App.tab = 'sp';
+
+// ---------- graphiques ----------
+const charts = [];
+function makeChart(canvas, W, H, series, getRows, fmtV) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ch = { canvas, W, H, series, getRows, fmtV: fmtV || (v => fmt(v)), hover: -1, dpr };
+  canvas.addEventListener('mousemove', e => {
+    const rows = ch.getRows(); if (!rows.length) return;
+    const r = canvas.getBoundingClientRect(), pl = 32, pr = 6;
+    ch.hover = clamp(Math.round((e.clientX - r.left - pl) / (W - pl - pr) * (rows.length - 1)), 0, rows.length - 1);
+    const row = rows[ch.hover];
+    const tip = $('tip'); tip.style.display = 'block';
+    tip.innerHTML = `<b>Génération ${row.gen}</b><br>` + series.map(s => `<i style="display:inline-block;width:10px;height:3px;background:${s.color};vertical-align:middle;margin-right:4px"></i>${s.label} : ${ch.fmtV(row[s.key])}`).join('<br>');
+    tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 10) + 'px';
+    drawChart(ch);
+  });
+  canvas.addEventListener('mouseleave', () => { ch.hover = -1; $('tip').style.display = 'none'; drawChart(ch); });
+  charts.push(ch);
+  return ch;
+}
+function drawChart(ch) {
+  const c2 = ch.canvas.getContext('2d'), { W, H } = ch, rows = ch.getRows(), P = { l: 32, r: 6, t: 6, b: 15 };
+  c2.setTransform(ch.dpr, 0, 0, ch.dpr, 0, 0); c2.clearRect(0, 0, W, H);
+  let maxY = 0; for (const r of rows) for (const s of ch.series) maxY = Math.max(maxY, r[s.key]); maxY = maxY * 1.1 || 1;
+  const X = i => P.l + (rows.length < 2 ? 0 : i / (rows.length - 1)) * (W - P.l - P.r), Y = v => H - P.b - v / maxY * (H - P.t - P.b);
+  c2.font = '9.5px system-ui'; c2.fillStyle = '#8a90a6'; c2.textAlign = 'right'; c2.textBaseline = 'middle';
+  for (let k = 0; k <= 2; k++) { const v = maxY * k / 2, y = Y(v); c2.strokeStyle = 'rgba(255,255,255,.07)'; c2.lineWidth = 1; c2.beginPath(); c2.moveTo(P.l, y); c2.lineTo(W - P.r, y); c2.stroke(); c2.fillText(ch.fmtV(v), P.l - 4, y); }
+  if (!rows.length) { c2.textAlign = 'center'; c2.fillText('En attente…', W / 2, H / 2); return; }
+  c2.textBaseline = 'alphabetic'; c2.textAlign = 'left'; c2.fillText('gén ' + rows[0].gen, P.l, H - 3); c2.textAlign = 'right'; c2.fillText('gén ' + rows[rows.length - 1].gen, W - P.r, H - 3);
+  for (const s of ch.series) { c2.strokeStyle = s.color; c2.lineWidth = 2; c2.lineJoin = 'round'; c2.beginPath(); rows.forEach((r, i) => i ? c2.lineTo(X(i), Y(r[s.key])) : c2.moveTo(X(i), Y(r[s.key]))); c2.stroke(); }
+  if (ch.hover >= 0 && ch.hover < rows.length) {
+    const x = X(ch.hover); c2.strokeStyle = 'rgba(255,255,255,.35)'; c2.lineWidth = 1; c2.beginPath(); c2.moveTo(x, P.t); c2.lineTo(x, H - P.b); c2.stroke();
+    for (const s of ch.series) { c2.fillStyle = s.color; c2.strokeStyle = '#0b0e15'; c2.lineWidth = 2; c2.beginPath(); c2.arc(x, Y(rows[ch.hover][s.key]), 4, 0, 7); c2.fill(); c2.stroke(); }
+  }
+}
+
+// ---------- bassin d'essai (course ancêtre vs champion) ----------
+const Tank = { canvas: null, runners: [], cam: { x: 0, y: 0 }, idx: -1, race: true, followLatest: true, pendingReset: true, sp: null, endT: 0 };
+function tankReset() {
+  Tank.pendingReset = false; const sp = App.selSp; Tank.sp = sp; Tank.runners = []; Tank.endT = 0;
+  if (!sp || !sp.champs || !sp.champs.length) return;
+  if (Tank.followLatest || Tank.idx >= sp.champs.length) Tank.idx = sp.champs.length - 1;
+  const entry = sp.champs[Tank.idx], anc = sp.champs[0], sc = makeScenarios({ evo: { trials: 1 } })[0];
+  const mk = (e, main) => { const tr = new Trial(e.g, sp.cfg, sc); tr.gen = e.gen; tr.main = main; tr.trail = []; tr.g = e.g; return tr; };
+  Tank.runners.push(mk(entry, true));
+  if (Tank.race && anc !== entry) Tank.runners.push(mk(anc, false));
+  Tank.cam.x = 0; Tank.cam.y = 0;
+  const sl = $('tankSlider'); if (sl) { sl.max = sp.champs.length - 1; sl.value = Tank.idx; $('tankGenLbl').textContent = `Champion de la génération ${entry.gen}` + (Tank.followLatest ? ' (dernière)' : ''); }
+}
+function tankStep(dt) {
+  if (!Tank.sp || !Tank.runners.length) return;
+  for (const r of Tank.runners) { r.step(dt); if (!r.done && (r.sim.t | 0) % 4 === 0) { r.trail.push(r.sim.x, r.sim.y); if (r.trail.length > 300) r.trail.splice(0, 2); } }
+  if (Tank.runners.every(r => r.done)) { Tank.endT += dt; if (Tank.endT > 90) tankReset(); }
+}
+function drawDummy(c2, x, y, kind, t, alpha) {
+  c2.save(); c2.globalAlpha = alpha; c2.translate(x, y);
+  if (kind === 'prey') { c2.fillStyle = '#c9d6e8'; c2.beginPath(); c2.ellipse(0, 0, 9, 5, Math.sin(t / 150) * 0.3, 0, 7); c2.fill(); c2.beginPath(); c2.moveTo(-8, 0); c2.lineTo(-14, -5); c2.lineTo(-14, 5); c2.fill(); }
+  else { c2.fillStyle = 'rgba(220,50,50,.85)'; c2.beginPath(); c2.arc(0, 0, 13, 0, 7); c2.fill(); c2.font = '15px serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText('🦈', 0, 1); }
+  c2.restore();
+}
+function renderTank(t) {
+  const c = Tank.canvas; if (!c) return;
+  const c2 = c.getContext('2d'), dpr = window.devicePixelRatio || 1, W = c.width / dpr, H = c.height / dpr;
+  c2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const g = c2.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0f4470'); g.addColorStop(1, '#06203d'); c2.fillStyle = g; c2.fillRect(0, 0, W, H);
+  const sp = Tank.sp;
+  if (!sp || !Tank.runners.length) { c2.fillStyle = '#8a90a6'; c2.font = '12px system-ui'; c2.textAlign = 'center'; c2.fillText('En attente de la première génération…', W / 2, H / 2); return; }
+  const main = Tank.runners[0], z = 0.85;
+  Tank.cam.x += (main.sim.x - Tank.cam.x) * 0.08; Tank.cam.y += (main.sim.y - Tank.cam.y) * 0.08;
+  c2.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - Tank.cam.x * z), dpr * (H / 2 - Tank.cam.y * z));
+  const x0 = Tank.cam.x - W / 2 / z, x1 = Tank.cam.x + W / 2 / z, y0 = Tank.cam.y - H / 2 / z, y1 = Tank.cam.y + H / 2 / z;
+  c2.strokeStyle = 'rgba(255,255,255,.06)'; c2.lineWidth = 1;
+  for (let x = Math.floor(x0 / 50) * 50; x < x1; x += 50) { c2.beginPath(); c2.moveTo(x, y0); c2.lineTo(x, y1); c2.stroke(); }
+  for (let y = Math.floor(y0 / 50) * 50; y < y1; y += 50) { c2.beginPath(); c2.moveTo(x0, y); c2.lineTo(x1, y); c2.stroke(); }
+  c2.strokeStyle = 'rgba(255,255,255,.3)'; c2.beginPath(); c2.arc(0, 0, 8, 0, 7); c2.stroke();
+  for (let i = Tank.runners.length - 1; i >= 0; i--) {
+    const r = Tank.runners[i], a = r.main ? 1 : 0.4, goal = r.goal;
+    if (r.trail.length > 3) { c2.strokeStyle = r.main ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.12)'; c2.lineWidth = 1.5; c2.beginPath(); c2.moveTo(r.trail[0], r.trail[1]); for (let k = 2; k < r.trail.length; k += 2) c2.lineTo(r.trail[k], r.trail[k + 1]); c2.stroke(); }
+    if (goal === 'hunt' || goal === 'survive') { c2.globalAlpha = a; drawShrimp(c2, { x: r.tx, y: r.ty, ph: i }, 1, t); c2.globalAlpha = 1; }
+    if (goal === 'predator') drawDummy(c2, r.tx, r.ty, 'prey', t, a);
+    if (goal === 'survive') drawDummy(c2, r.ex, r.ey, 'pred', t, a);
+    drawCreature(c2, r.sim, { alpha: r.caught ? a * 0.35 : a, glow: r.main, muscles: App.ov.muscles, forces: App.ov.forces, xray: App.ov.xray, pattern: sp.cfg.pattern, diet: sp.cfg.diet });
+  }
+  c2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c2.font = '11px system-ui'; c2.textAlign = 'left';
+  Tank.runners.forEach((r, i) => { c2.fillStyle = 'rgba(0,0,0,.45)'; c2.fillRect(6, 6 + i * 20, 240, 17); c2.fillStyle = r.main ? '#fff' : '#9aa3b8';
+    c2.fillText(`${r.main ? '●' : '○'} Gén ${r.gen}${r.main ? '' : ' (ancêtre)'} : ${r.label()}`, 11, 18 + i * 20); });
+  c2.fillStyle = 'rgba(255,255,255,.5)'; c2.textAlign = 'right'; c2.fillText(`t = ${main.t | 0} / ${sp.cfg.goal.dur}`, W - 8, H - 8);
+}
+
+// ---------- onglet Espèce ----------
+let spCharts = null;
+function buildSpeciesTab() {
+  const sp = App.selSp, box = $('tab-sp');
+  spCharts = null; Tank.canvas = null;
+  if (!sp) { box.innerHTML = '<div class="placeholder">Sélectionne une espèce à gauche<br>pour voir son évolution.</div>'; return; }
+  box.innerHTML = `
+    <div><div style="font-size:16px;font-weight:700">${esc(sp.cfg.name)}</div>
+      <div style="color:var(--muted);margin-top:3px">${DIETS[sp.cfg.diet]}<br>${GOALS[sp.cfg.goal.type]} · ${sp.running ? '🧬 en évolution' : '❄ stockée'} · ${stageName(sp.champ ? sp.champ.nSeg : sp.cfg.body.segStart)}</div></div>
+    <div>
+      <div class="h" style="margin-bottom:6px">Bassin d'essai</div>
+      <div class="canvasbox"><canvas id="tankCv"></canvas></div>
+      <div style="margin-top:8px"><div class="kv"><span id="tankGenLbl">–</span></div><input type="range" id="tankSlider" min="0" max="0" value="0"></div>
+      <div class="row" style="margin-top:6px;flex-wrap:wrap">
+        <label class="row" style="cursor:pointer;font-size:12px"><input type="checkbox" id="tankRace" ${Tank.race ? 'checked' : ''}> Course contre l'ancêtre</label>
+        <div class="spacer"></div>
+        <button id="tankLatest" title="Dernière génération">⏭</button><button id="tankReplay" title="Rejouer">↻</button><button id="tankInspect">🔬 Inspecter</button><button id="tankKeep" title="Garder ce champion dans la collection de spécimens">⭐ Garder</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v" id="spGen"></div><div class="k">Génération</div></div>
+      <div class="stat"><div class="v" id="spEvals"></div><div class="k">Copies testées</div></div>
+      <div class="stat"><div class="v" id="spBest"></div><div class="k">Score champion</div></div>
+    </div>
+    <div>
+      <div class="h" style="margin-bottom:6px">Score par génération</div>
+      <div class="legend" style="margin-bottom:4px"><span><i style="background:${NEG}"></i>Champion</span><span><i style="background:${POS}"></i>Moyenne de la population</span></div>
+      <canvas id="chScore"></canvas>
+    </div>
+    <div class="smalls">
+      <div><div class="t">🦴 Vertèbres (moyenne)</div><canvas id="chVert"></canvas></div>
+      <div><div class="t">💪 Puissance musculaire</div><canvas id="chStr"></canvas></div>
+      <div><div class="t">🧠 Neurones actifs</div><canvas id="chNeur"></canvas></div>
+      <div><div class="t">🧬 Diversité génétique</div><canvas id="chDiv"></canvas></div>
+    </div>
+    <div><div class="h" style="margin-bottom:6px">Musée des fossiles <span style="text-transform:none;letter-spacing:0">(clique pour le voir nager)</span></div><div class="fossils" id="fossils"></div></div>
+    <div><div class="h" style="margin-bottom:6px">Journal de l'évolution</div><div class="log" id="spLog"></div></div>
+    <div class="row">
+      <select id="spGoal" style="flex:1">${Object.entries(GOALS).map(([k, v]) => `<option value="${k}" ${k === sp.cfg.goal.type ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <button id="spEdit">✏ Contraintes</button>
+    </div>`;
+  const tc = $('tankCv'), dpr = window.devicePixelRatio || 1; tc.width = 340 * dpr; tc.height = 220 * dpr; tc.style.width = '340px'; tc.style.height = '220px'; Tank.canvas = tc;
+  $('tankSlider').oninput = e => { Tank.idx = +e.target.value; Tank.followLatest = Tank.idx >= sp.champs.length - 1; tankReset(); };
+  $('tankRace').onchange = e => { Tank.race = e.target.checked; tankReset(); };
+  $('tankLatest').onclick = () => { Tank.followLatest = true; tankReset(); };
+  $('tankReplay').onclick = () => tankReset();
+  $('tankInspect').onclick = () => { const r = Tank.runners[0]; if (r) { App.selCr = { sim: r.sim, sp, tank: true, gen: r.gen, powerHist: [] }; showTab('ind'); } };
+  $('tankKeep').onclick = () => { const r = Tank.runners[0]; if (r) addSpecimen(r.g, sp, `${sp.cfg.name} · gén ${r.gen}`, r.gen); };
+  $('spGoal').onchange = e => { sp.cfg.goal.type = e.target.value; send({ t: 'cfg', id: sp.id, cfg: sp.cfg }); addLog(sp, `📢 Nouvel objectif : ${GOALS[sp.cfg.goal.type]}`); sp.record = 0; spTabFor = null; dirty.sp = true; dirty.list = true; tankReset(); };
+  $('spEdit').onclick = () => openEditor(sp);
+  const rows = () => sp.history;
+  spCharts = [
+    makeChart($('chScore'), 340, 120, [{ key: 'best', color: NEG, label: 'Champion' }, { key: 'avg', color: POS, label: 'Moyenne' }], rows),
+    makeChart($('chVert'), 164, 70, [{ key: 'vert', color: NEG, label: 'Vertèbres' }], rows, v => v.toFixed(1)),
+    makeChart($('chStr'), 164, 70, [{ key: 'str', color: NEG, label: 'Puissance' }], rows, v => v.toFixed(2)),
+    makeChart($('chNeur'), 164, 70, [{ key: 'neur', color: NEG, label: 'Neurones' }], rows, v => v.toFixed(1)),
+    makeChart($('chDiv'), 164, 70, [{ key: 'div', color: NEG, label: 'Diversité' }], rows, v => v.toFixed(1)),
+  ];
+  if (Tank.sp !== sp) Tank.pendingReset = true;
+  updateSpeciesTab(true);
+}
+let lastFossil = 0;
+function updateSpeciesTab(full) {
+  const sp = App.selSp; if (!sp || !spCharts) return;
+  const h = sp.history[sp.history.length - 1];
+  $('spGen').textContent = fmt(sp.gen); $('spEvals').textContent = fmt(sp.evals); $('spBest').textContent = h ? fmt(h.best) : '–';
+  spCharts.forEach(drawChart);
+  $('spLog').innerHTML = sp.log.map(l => `<div>${l}</div>`).join('');
+  const sl = $('tankSlider'); if (sl && sp.champs.length) { sl.max = sp.champs.length - 1; if (Tank.followLatest) sl.value = sl.max; }
+  if (full || performance.now() - lastFossil > 3000) { lastFossil = performance.now(); renderFossils(sp); }
+}
+function renderFossils(sp) {
+  const box = $('fossils'); if (!box) return; box.innerHTML = '';
+  const marks = [0, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000];
+  const picks = []; const seen = new Set();
+  for (const m of marks) { let bi = -1, bd = 1e9; sp.champs.forEach((c, i) => { const d = Math.abs(c.gen - m); if (d < bd) { bd = d; bi = i; } }); if (bi >= 0 && !seen.has(bi) && bd <= Math.max(3, m * 0.3)) { seen.add(bi); picks.push(bi); } }
+  if (sp.champs.length && !seen.has(sp.champs.length - 1)) picks.push(sp.champs.length - 1);
+  for (const i of picks) {
+    const e = sp.champs[i], el = document.createElement('div'); el.className = 'fossil';
+    el.innerHTML = `<canvas width="168" height="104"></canvas>Gén ${e.gen} · ${e.g.nSeg}🦴`;
+    el.onclick = () => { Tank.idx = i; Tank.followLatest = i === sp.champs.length - 1; tankReset(); };
+    box.appendChild(el); poseThumb(el.querySelector('canvas'), e.g, sp.cfg);
+  }
+}
+
+// ---------- onglet Individu : cerveau, muscles, gènes ----------
+let indBuiltFor = null;
+function buildIndTab() {
+  const box = $('tab-ind'), c = App.selCr; indBuiltFor = c;
+  if (!c) { box.innerHTML = '<div class="placeholder">Clique sur une créature dans l\'océan<br>(ou « 🔬 Inspecter » dans le bassin d\'essai)<br>pour voir son cerveau, ses muscles et ses gènes en direct.<br><br>Double-clic : la caméra la suit.</div>'; return; }
+  if (c.dead) { const r = c.ref; box.innerHTML = `<div class="placeholder">💀 Cette créature est morte.<br><br>Âge : ${fmt(r.age)} · ${r.eaten} crevettes mangées · ${r.kids} enfants.<br>Génération océanique ${r.ogen}.</div>`; return; }
+  const s = c.sim, g = s.g, cfg = s.cfg, sp = c.sp;
+  const origin = c.tank ? `Champion du labo, génération ${c.gen}` : (c.ogen ? `Né dans l'océan · génération sauvage ${c.ogen} (lignée du labo gén ${c.labGen})` : `Champion du labo, lâché à la génération ${c.labGen}`);
+  box.innerHTML = `
+    <div><div style="font-size:16px;font-weight:700">${esc(cfg.name)} <span style="color:var(--muted);font-weight:400;font-size:12px">#${c.id || g.id % 10000}</span></div>
+      <div style="color:var(--muted);margin-top:3px">${origin}</div></div>
+    ${c.tank ? '' : `<div><div class="kv"><span>Énergie</span><b id="inEnergyV"></b></div><div class="energy"><div id="inEnergy"></div></div></div>
+    <div class="stats"><div class="stat"><div class="v" id="inAge"></div><div class="k">Âge</div></div><div class="stat"><div class="v" id="inEat"></div><div class="k">Crevettes</div></div><div class="stat"><div class="v" id="inKids"></div><div class="k">Enfants</div></div></div>
+    <div class="row" style="gap:14px;flex-wrap:wrap"><label class="row" style="cursor:pointer"><input type="checkbox" id="inSterile" ${c.sterile ? 'checked' : ''}> 🔒 Stérile</label><label class="row" style="cursor:pointer"><input type="checkbox" id="inImmortal" ${c.immortal ? 'checked' : ''}> ♾ Immortel et intouchable</label></div>`}
+    <div><div class="row" style="justify-content:space-between;margin-bottom:6px"><div class="h">🧠 Cerveau en direct</div><span style="font-size:11px;color:var(--muted)">${synapseCount(cfg)} synapses</span></div>
+      <div class="canvasbox"><canvas id="brainCv"></canvas></div>
+      <div class="legend" style="margin-top:6px"><span><i style="background:${POS}"></i>activation positive</span><span><i style="background:${NEG}"></i>activation négative</span><span><i style="background:#5b6070"></i>neurone dormant</span></div></div>
+    <div><div class="h" style="margin-bottom:6px">💪 Muscles : courbure de chaque articulation</div>
+      <div class="canvasbox"><canvas id="muscleCv"></canvas></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5">Tête à gauche, queue à droite. Quand elle nage bien, tu vois une <b>onde</b> parcourir le corps : c'est elle qui pousse l'eau.</div></div>
+    ${c.tank ? '' : `<div><div class="h" style="margin-bottom:6px">⚡ Puissance musculaire dépensée</div><div class="canvasbox"><canvas id="powerCv"></canvas></div></div>`}
+    <div><div class="h" style="margin-bottom:8px">🧬 Génome</div><div class="genes" id="genes"></div></div>
+    <div class="row" style="flex-wrap:wrap">
+      ${c.tank ? '' : '<button id="inFollow">🎥 Suivre</button>'}
+      <button id="inKeep">⭐ Garder comme spécimen</button>
+      <button id="inFound">🧪 Fonder une espèce</button>
+      ${c.tank ? '' : '<button id="inKill" class="danger">✖ Retirer</button>'}
+    </div>`;
+  const dpr = window.devicePixelRatio || 1;
+  const setup = (id, w, h) => { const el = $(id); if (!el) return; el.width = w * dpr; el.height = h * dpr; el.style.width = w + 'px'; el.style.height = h + 'px'; };
+  setup('brainCv', 340, 300); setup('muscleCv', 340, 90); setup('powerCv', 340, 60);
+  const b = cfg.body, gene = (label, v, max, txt) => `<div class="gene"><span>${label}</span><div class="gb"><div style="width:${clamp(v / max * 100, 2, 100)}%"></div></div><span class="gv">${txt}</span></div>`;
+  const act = g.brain.active.reduce((a, v) => a + v, 0), maxN = cfg.brain.layers.reduce((a, v) => a + v, 0);
+  $('genes').innerHTML = [
+    gene('Vertèbres', g.nSeg, b.segMax, `${g.nSeg} / ${b.segMax}`),
+    gene('Longueur des vertèbres', g.segLen, b.lenMax, g.segLen.toFixed(1)),
+    gene('Épaisseur de la tête', g.headW, b.widthMax, g.headW.toFixed(1)),
+    gene('Effilement', g.taper, 1, g.taper.toFixed(2)),
+    gene('Nageoire caudale', g.fin, Math.max(0.01, b.finMax), g.fin.toFixed(2)),
+    gene('Nageoires pectorales', g.pect, Math.max(0.01, b.pectMax), g.pect.toFixed(2)),
+    gene('Flexibilité', g.flex, b.flexMax, (g.flex * 57.3).toFixed(0) + '°'),
+    gene('Puissance musculaire', g.str, b.strMax, g.str.toFixed(2)),
+    gene('Rythme de l\'oscillateur', g.freq, b.freqMax, g.freq.toFixed(3)),
+    gene('Neurones actifs', act, maxN, `${act} / ${maxN}`),
+  ].join('');
+  if ($('inSterile')) { $('inSterile').onchange = e => { c.sterile = e.target.checked; }; $('inImmortal').onchange = e => { c.immortal = e.target.checked; }; }
+  $('inKeep').onclick = () => addSpecimen(g, sp, c.name || `${cfg.name} #${c.id || ''}`, c.tank ? c.gen : c.labGen);
+  if ($('inFollow')) $('inFollow').onclick = () => { App.follow = true; App.cam.z = Math.max(App.cam.z, 1.5); };
+  if ($('inKill')) $('inKill').onclick = () => { c.alive = false; App.world.creatures = App.world.creatures.filter(x => x !== c); App.selCr = null; dirty.ind = true; };
+  $('inFound').onclick = () => {
+    const ncfg = structuredClone(cfg); ncfg.name = randomName(); ncfg.hue = Math.round(g.hue + 60) % 360;
+    const seed = cloneG(g); seed.hue = ncfg.hue;
+    const ns = createSpecies(ncfg, { seeds: [seed] });
+    addLog(ns, `🧪 Fondée à partir d'un individu de ${esc(cfg.name)}`);
+    App.selSp = ns; showTab('sp'); renderSpeciesList(); toast(`Nouvelle espèce <b>${esc(ncfg.name)}</b> fondée à partir de cet individu !`);
+  };
+  updateIndTab();
+}
+function nodeColor(v, dormant) {
+  if (dormant) return '#2a2f3d';
+  const a = clamp(Math.abs(v), 0, 1), base = [91, 96, 112], tgt = v >= 0 ? [231, 102, 36] : [51, 140, 237];
+  return `rgb(${base.map((b, i) => Math.round(b + (tgt[i] - b) * a)).join(',')})`;
+}
+function drawBrain() {
+  const c = App.selCr, el = $('brainCv'); if (!el || !c || !c.sim) return;
+  const s = c.sim, b = s.g.brain, cfg = s.cfg, c2 = el.getContext('2d'), dpr = window.devicePixelRatio || 1, W = 340, H = 300;
+  c2.setTransform(dpr, 0, 0, dpr, 0, 0); c2.clearRect(0, 0, W, H);
+  const cols = [], nl = cfg.brain.layers.length, left = 92, right = 30, n = s.n;
+  const layerX = i => left + i * (W - left - right) / (nl + 1);
+  const ys = (count, i) => 12 + (i + 0.5) * (H - 24) / count;
+  const sensOn = new Array(NIN).fill(false); sensOn[10] = true;
+  SENSOR_DEFS.forEach(d => d.idx.forEach(i => sensOn[i] = !!cfg.brain.sensors[d.k]));
+  cols.push(arr(NIN, (_, i) => ({ x: layerX(0), y: ys(NIN, i), v: s.inp[i], dormant: !sensOn[i] })));
+  for (let l = 0; l < nl; l++) { const sz = b.sizes[l + 1]; cols.push(arr(sz, (_, i) => ({ x: layerX(l + 1), y: ys(sz, i), v: s.acts[l][i], dormant: i >= b.active[l] }))); }
+  const outN = b.sizes[nl + 1]; cols.push(arr(outN, (_, i) => ({ x: layerX(nl + 1), y: ys(outN, i), v: s.out[i + 1] || 0, dormant: i >= n - 1 })));
+  // synapses : couleur = signal qui passe (poids × activation)
+  for (let l = 0; l <= nl; l++) {
+    const src = cols[l], dst = cols[l + 1], W2 = b.W[l], stride = b.sizes[l] + 1;
+    for (let o = 0; o < dst.length; o++) { if (dst[o].dormant) continue;
+      for (let i = 0; i < src.length; i++) { if (src[i].dormant) continue;
+        const w = W2[o * stride + i], sig = w * src[i].v, m = Math.abs(sig); if (m < 0.04) continue;
+        c2.strokeStyle = sig > 0 ? `rgba(231,102,36,${Math.min(0.85, m * 0.5)})` : `rgba(51,140,237,${Math.min(0.85, m * 0.5)})`;
+        c2.lineWidth = Math.min(3, 0.4 + Math.abs(w) * 0.5);
+        c2.beginPath(); c2.moveTo(src[i].x, src[i].y); c2.lineTo(dst[o].x, dst[o].y); c2.stroke(); } }
+  }
+  if (b.R) { c2.strokeStyle = 'rgba(200,180,255,.5)'; c2.lineWidth = 1; for (const nd of cols[1]) if (!nd.dormant) { c2.beginPath(); c2.arc(nd.x + 7, nd.y - 5, 5, 0.3, 5.8); c2.stroke(); } }
+  for (const col of cols) { const r = Math.max(2.2, Math.min(6.5, (H - 24) / col.length * 0.36));
+    for (const nd of col) { c2.fillStyle = nodeColor(nd.v, nd.dormant); c2.beginPath(); c2.arc(nd.x, nd.y, r, 0, 7); c2.fill(); if (!nd.dormant) { c2.strokeStyle = 'rgba(255,255,255,.35)'; c2.lineWidth = 0.8; c2.stroke(); } } }
+  c2.font = '9.5px system-ui'; c2.textAlign = 'right'; c2.textBaseline = 'middle';
+  cols[0].forEach((nd, i) => { c2.fillStyle = nd.dormant ? '#4a5064' : '#c9cede'; c2.fillText(INPUT_LABELS[i], nd.x - 9, nd.y); });
+  c2.textAlign = 'left'; cols[cols.length - 1].forEach((nd, i) => { if (!nd.dormant && (outN < 14 || i % 2 === 0)) { c2.fillStyle = '#c9cede'; c2.fillText('M' + (i + 1), nd.x + 8, nd.y); } });
+  c2.fillStyle = '#6c7288'; c2.textAlign = 'center'; c2.font = '9px system-ui';
+  c2.fillText('sens', layerX(0), H - 3); for (let l = 0; l < nl; l++) c2.fillText(cfg.brain.recurrent && l === 0 ? 'couche 1 ↺' : 'couche ' + (l + 1), layerX(l + 1), H - 3); c2.fillText('muscles', layerX(nl + 1), H - 3);
+}
+function drawMuscles() {
+  const c = App.selCr, el = $('muscleCv'); if (!el || !c || !c.sim) return;
+  const s = c.sim, c2 = el.getContext('2d'), dpr = window.devicePixelRatio || 1, W = 340, H = 90, n = s.n - 1;
+  c2.setTransform(dpr, 0, 0, dpr, 0, 0); c2.clearRect(0, 0, W, H);
+  const mid = H / 2 - 6; c2.strokeStyle = 'rgba(255,255,255,.15)'; c2.beginPath(); c2.moveTo(8, mid); c2.lineTo(W - 8, mid); c2.stroke();
+  if (n < 1) return;
+  const bw = (W - 16) / n;
+  for (let j = 1; j <= n; j++) {
+    const v = s.a[j] / s.g.flex, h = v * (mid - 6), x = 8 + (j - 1) * bw + 2;
+    c2.fillStyle = v >= 0 ? POS : NEG; c2.beginPath(); c2.roundRect(x, h >= 0 ? mid - h : mid, bw - 4, Math.max(1, Math.abs(h)), 3); c2.fill();
+    const e = clamp(s.effort[j], 0, 1); c2.fillStyle = `rgba(255,220,120,${0.15 + e * 0.85})`; c2.beginPath(); c2.arc(x + (bw - 4) / 2, H - 6, 2 + e * 3, 0, 7); c2.fill();
+  }
+}
+function drawPower() {
+  const c = App.selCr, el = $('powerCv'); if (!el || !c || !c.powerHist) return;
+  const c2 = el.getContext('2d'), dpr = window.devicePixelRatio || 1, W = 340, H = 60, h = c.powerHist;
+  c2.setTransform(dpr, 0, 0, dpr, 0, 0); c2.clearRect(0, 0, W, H); if (h.length < 2) return;
+  const mx = Math.max(...h) * 1.1 || 1;
+  c2.strokeStyle = NEG; c2.lineWidth = 2; c2.lineJoin = 'round'; c2.beginPath();
+  h.forEach((v, i) => { const x = 6 + i / 299 * (W - 12), y = H - 6 - v / mx * (H - 12); i ? c2.lineTo(x, y) : c2.moveTo(x, y); }); c2.stroke();
+  c2.fillStyle = '#8a90a6'; c2.font = '9.5px system-ui'; c2.textAlign = 'right'; c2.fillText(`${h[h.length - 1].toFixed(1)} (max ${mx.toFixed(1)})`, W - 6, 11);
+}
+function updateIndTab() {
+  const c = App.selCr; if (!c || c.dead || c.tank || !$('inEnergy')) return;
+  $('inEnergy').style.width = clamp(c.energy / 220 * 100, 0, 100) + '%'; $('inEnergy').style.background = c.energy < 40 ? '#eb6263' : c.energy > 165 ? '#d28e05' : '#0aac23';
+  $('inEnergyV').textContent = `${fmt(c.energy)}${c.energy > 165 ? ' · prête à se reproduire' : c.energy < 40 ? ' · affamée' : ''}`;
+  $('inAge').textContent = fmt(c.age); $('inEat').textContent = c.eaten + (c.kills ? ` · ☠${c.kills}` : ''); $('inKids').textContent = c.kids;
+}
+
+// =====================================================================
+//  ⭐ SPÉCIMENS : des individus figés, stables, à observer ou faire combattre
+// =====================================================================
+App.specimens = [];
+function addSpecimen(g, sp, name, gen) {
+  const spec = { id: newId(), name: name || sp.cfg.name, spId: sp.id, spName: sp.cfg.name, cfg: structuredClone(sp.cfg), g: cloneG(g), gen: gen ?? sp.gen, date: Date.now() };
+  App.specimens.unshift(spec);
+  toast(`⭐ <b>${esc(spec.name)}</b> rejoint ta collection de spécimens (onglet ⭐)`);
+  if (App.tab === 'spec') renderSpecimens();
+}
+function specSpecies(spec) { return spec.ghost || (spec.ghost = { id: -spec.id, cfg: spec.cfg, gen: spec.gen, ghost: true }); }
+function releaseSpecimen(spec, opts) {
+  if (App.view === 'arena') showOcean();
+  const cx = clamp(App.cam.x, 100, App.ocean.W - 100), cy = clamp(App.cam.y, 100, floorY(App.cam.x) - 100);
+  const c = spawnCreature(clampGenome(cloneG(spec.g), spec.cfg), specSpecies(spec), cx, cy, { sterile: true, immortal: !!opts.immortal, specId: spec.id, name: spec.name, labGen: spec.gen }, App.ocean);
+  burst(cx, cy, '255,220,120', 24, 2.5);
+  if (opts.observe) { selectCreature(c); App.follow = true; App.cam.z = Math.max(App.cam.z, 1.6); }
+  return c;
+}
+function renderSpecimens() {
+  const box = $('tab-spec'); if (!box) return;
+  box.innerHTML = `<div><div style="font-size:16px;font-weight:700">⭐ Collection de spécimens</div>
+    <div style="color:var(--muted);margin-top:4px;line-height:1.5">Des individus <b>figés</b> : leur génome ne change plus. Ils sont <b>stériles</b> (aucun descendant ne vient brouiller l'observation) et peuvent être rendus <b>immortels</b>. Ajoute-en avec « ⭐ Garder » dans le bassin d'essai ou l'inspecteur.</div></div>`;
+  if (!App.specimens.length) { box.insertAdjacentHTML('beforeend', '<div class="placeholder">Aucun spécimen pour l\'instant.</div>'); return; }
+  for (const spec of App.specimens) {
+    const el = document.createElement('div'); el.className = 'spec';
+    const inOcean = App.ocean.creatures.filter(c => c.specId === spec.id).length;
+    el.innerHTML = `<div class="top"><canvas width="168" height="104"></canvas><div style="min-width:0;flex:1">
+        <input type="text" value="${esc(spec.name)}">
+        <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5">${esc(spec.spName)} · gén ${spec.gen} · ${spec.g.nSeg} 🦴 · ${DIETS[spec.cfg.diet || 'herbivore'].split(' ')[0]}<br>${inOcean ? `🌊 ${inOcean} dans l'océan` : 'au repos dans la collection'}</div></div></div>
+      <div class="btns">
+        <button data-a="obs" title="Lâcher une copie immortelle et stérile, et la suivre">🔬 Observer</button>
+        <button data-a="rel" title="Lâcher une copie stérile mais mortelle (elle peut mourir de faim ou être mangée)">🌊 Lâcher</button>
+        <button data-a="duel" title="L'envoyer dans l'arène">⚔ Duel</button>
+        <button data-a="found" title="Fonder une nouvelle espèce qui évolue à partir de lui">🧪</button>
+        <button data-a="del" class="danger" title="Supprimer de la collection">🗑</button>
+      </div>`;
+    el.querySelector('input').onchange = e => { spec.name = e.target.value || spec.name; App.ocean.creatures.forEach(c => { if (c.specId === spec.id) c.name = spec.name; }); };
+    el.querySelector('.btns').onclick = e => {
+      const a = e.target.dataset.a; if (!a) return;
+      if (a === 'obs') { releaseSpecimen(spec, { immortal: true, observe: true }); toast(`🔬 ${esc(spec.name)} est dans l'océan (stérile et immortel). La caméra le suit.`); }
+      if (a === 'rel') { releaseSpecimen(spec, { immortal: false }); toast(`🌊 ${esc(spec.name)} est lâché (stérile, mais il peut mourir).`); }
+      if (a === 'duel') openArena('spec:' + spec.id);
+      if (a === 'found') { const cfg = structuredClone(spec.cfg); cfg.name = randomName(); const ns = createSpecies(cfg, { seeds: [cloneG(spec.g)] }); addLog(ns, `🧪 Fondée à partir du spécimen ${esc(spec.name)}`); App.selSp = ns; showTab('sp'); }
+      if (a === 'del') { if (!confirm(`Supprimer le spécimen « ${spec.name} » ?`)) return; App.specimens = App.specimens.filter(s => s !== spec); }
+      renderSpecimens();
+    };
+    box.appendChild(el);
+    poseThumb(el.querySelector('canvas'), spec.g, spec.cfg);
+  }
+}
+
+// =====================================================================
+//  ⚔ L'ARÈNE : duels entre espèces ou spécimens
+// =====================================================================
+const DUEL_MODES = {
+  fight: '⚔ Combat (prédation activée, faim activée : le dernier camp en vie gagne)',
+  food: '🦐 Course aux crevettes (le camp qui en mange le plus gagne)',
+  sprint: '🏁 Sprint (le premier à franchir la ligne d\'arrivée gagne)',
+};
+let lastDuel = null;
+function contenders() {
+  const list = App.species.filter(s => s.champ).map(s => ({ key: 'sp:' + s.id, label: `🧬 ${s.cfg.name} (gén ${s.gen}) ${s.cfg.diet === 'carnivore' ? '🦷' : ''}`, g: s.champ, cfg: s.cfg }));
+  for (const spec of App.specimens) list.push({ key: 'spec:' + spec.id, label: `⭐ ${spec.name} ${spec.cfg.diet === 'carnivore' ? '🦷' : ''}`, g: spec.g, cfg: spec.cfg });
+  return list;
+}
+function openArena(preA, preB) {
+  const list = contenders();
+  if (list.length < 1) return toast('Il faut au moins une espèce avec une génération terminée (ou un spécimen).');
+  const d = lastDuel || {};
+  const a = preA || d.a || list[0].key, b = preB || d.b || (list.find(x => x.key !== a) || list[0]).key;
+  const opts = sel => list.map(x => `<option value="${x.key}" ${x.key === sel ? 'selected' : ''}>${esc(x.label)}</option>`).join('');
+  $('modal').innerHTML = `<div class="mbox" style="grid-template-columns:1fr;height:auto;max-height:94vh;width:min(860px,96vw)"><div class="mform">
+    <h2>⚔ Arène</h2><div class="intro">Choisis deux camps : une espèce envoie ses meilleurs champions, un spécimen envoie des copies de lui-même. Avec 1 contre 1, c'est un vrai duel.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      ${['a', 'b'].map((s, i) => `<div class="duelcol"><div class="h">Camp ${i ? 'B (à droite)' : 'A (à gauche)'}</div>
+        <select id="du_${s}">${opts(i ? b : a)}</select><canvas id="du_${s}_cv" width="320" height="140" style="width:100%;height:140px;background:#0c2540;border-radius:9px"></canvas>
+        <div class="kv"><span>Combattants</span><b id="du_${s}_nv">${d['n' + s] || 1}</b></div><input type="range" id="du_${s}_n" min="1" max="15" value="${d['n' + s] || 1}"></div>`).join('')}
+    </div>
+    <div class="sec"><div class="field"><label>Épreuve</label><select id="du_mode" style="grid-column:2/4">${Object.entries(DUEL_MODES).map(([k, v]) => `<option value="${k}" ${k === (d.mode || 'fight') ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+    <div class="field"><label>Durée maximale</label><input type="range" id="du_T" min="20" max="240" step="10" value="${d.T || 90}"><span class="val" id="du_Tv">${d.T || 90} s</span></div></div>
+    <div style="color:var(--muted);font-size:12px;line-height:1.5;margin-top:6px" id="du_hint"></div>
+    <div class="mfoot" style="margin-top:16px"><button id="du_cancel">Annuler</button><button class="primary" id="du_go">⚔ Lancer le duel</button></div></div></div>`;
+  $('modal').classList.add('show');
+  const upd = () => {
+    for (const s of ['a', 'b']) { const x = list.find(o => o.key === $('du_' + s).value); poseThumb($('du_' + s + '_cv'), x && x.g, x ? x.cfg : defaultCfg()); $('du_' + s + '_nv').textContent = $('du_' + s + '_n').value; }
+    $('du_Tv').textContent = $('du_T').value + ' s';
+    const A = list.find(o => o.key === $('du_a').value), B = list.find(o => o.key === $('du_b').value), meat = [A, B].filter(x => x && x.cfg.diet !== 'herbivore').length;
+    $('du_hint').innerHTML = $('du_mode').value === 'fight' ? (meat ? '🦷 Au moins un camp est carnivore : ça va mordre !' : '🌿 Aucun carnivore : le combat se jouera à l\'endurance (qui survit le plus longtemps à la faim).') : '';
+  };
+  ['du_a', 'du_b', 'du_a_n', 'du_b_n', 'du_mode', 'du_T'].forEach(id => $(id).addEventListener('input', upd));
+  upd();
+  $('du_cancel').onclick = closeEditor;
+  $('du_go').onclick = () => { const c = { a: $('du_a').value, b: $('du_b').value, na: +$('du_a_n').value, nb: +$('du_b_n').value, mode: $('du_mode').value, T: +$('du_T').value }; closeEditor(); startDuel(c); };
+}
+$('arenaBtn').onclick = () => openArena();
+
+async function sideGenomes(key, n) {
+  const [kind, idS] = key.split(':'), id = +idS;
+  if (kind === 'sp') {
+    const sp = spById(id); if (!sp) return null;
+    const top = (await request({ t: 'top', id, n })) || []; const gs = top.length ? top : [sp.champ];
+    return { sp, label: sp.cfg.name, hue: sp.cfg.hue, genomes: arr(n, (_, i) => gs[i % gs.length]) };
+  }
+  const spec = App.specimens.find(s => s.id === id); if (!spec) return null;
+  return { sp: specSpecies(spec), label: '⭐ ' + spec.name, hue: spec.g.hue, genomes: arr(n, () => clampGenome(cloneG(spec.g), spec.cfg)), spec };
+}
+async function startDuel(cfg) {
+  lastDuel = cfg;
+  const A = await sideGenomes(cfg.a, cfg.na), B = await sideGenomes(cfg.b, cfg.nb);
+  if (!A || !B) return toast('Combattant introuvable.');
+  const w = new World('arena', 1800, 1100);
+  w.settings.foodTarget = cfg.mode === 'food' ? 70 : cfg.mode === 'fight' ? 35 : 0;
+  w.settings.repro = false; w.settings.predation = cfg.mode === 'fight'; w.noHunger = cfg.mode !== 'fight';
+  w.cam = { x: w.W / 2, y: w.H / 2, z: Math.min(CW / w.W, CH / w.H) * 0.92 };
+  const sides = [A, B];
+  sides.forEach((S, si) => S.genomes.forEach((g, i) => {
+    let x, y, th;
+    if (cfg.mode === 'sprint') { x = rnd(90, 200); y = si === 0 ? rnd(80, w.H / 2 - 60) : rnd(w.H / 2 + 60, w.H - 80); th = 0; }
+    else { x = si === 0 ? rnd(90, 220) : rnd(w.W - 220, w.W - 90); y = (i + 1) / (S.genomes.length + 1) * w.H; th = si === 0 ? 0 : Math.PI; }
+    spawnCreature(g, S.sp, x, y, { side: si, sterile: true, th, energy: 120, name: S.spec ? S.spec.name : undefined, specId: S.spec && S.spec.id, labGen: S.sp.gen }, w);
+  }));
+  if (cfg.mode === 'sprint') w.targetFn = c => ({ x: w.W - 60, y: c.sim.y, alive: true, fake: true });
+  for (let i = 0; i < w.settings.foodTarget; i++) spawnFood(w);
+  w.duel = { cfg, mode: cfg.mode, T: cfg.T * 60, t: 0, over: false, winner: null, sides: sides.map((S, i) => ({ label: S.label, hue: S.hue, start: S.genomes.length, finish: null })) };
+  w.onStep = dt => duelStep(w, dt);
+  w.eatenBy = [0, 0]; w.killsDead = [0, 0];
+  w.onDeath = c => { w.eatenBy[c.side] += c.eaten; w.killsDead[c.side] += c.kills; }; // les morts gardent leur score
+  App.arena = w; App.view = 'arena'; App.selCr = null; App.follow = false; dirty.ind = true;
+  $('winner').classList.remove('show'); $('duelHud').classList.add('show');
+  if (!App.timeScale) setTime(1);
+  toast(`⚔ ${esc(A.label)} contre ${esc(B.label)} : ${DUEL_MODES[cfg.mode].split('(')[0]}`);
+}
+function duelStats(w) {
+  return [0, 1].map(si => { const cs = w.creatures.filter(c => c.side === si && c.alive);
+    return { alive: cs.length, eaten: w.eatenBy[si] + cs.reduce((a, c) => a + c.eaten, 0), kills: w.killsDead[si] + cs.reduce((a, c) => a + c.kills, 0), best: cs.reduce((a, c) => Math.max(a, c.sim.x), 0) }; });
+}
+function duelStep(w, dt) {
+  const D = w.duel; if (D.over) return;
+  D.t += dt;
+  const st = duelStats(w);
+  if (D.mode === 'sprint') {
+    for (const c of w.creatures) if (c.sim.x >= w.W - 150 && !D.over) return endDuel(w, c.side, `${c.name || c.sp.cfg.name} franchit la ligne en premier en ${(D.t / 60).toFixed(1)} s !`);
+  }
+  if (D.mode === 'fight' && (st[0].alive === 0 || st[1].alive === 0)) {
+    if (st[0].alive === st[1].alive) return endDuel(w, null, 'Les deux camps ont été anéantis.');
+    const win = st[0].alive ? 0 : 1; return endDuel(w, win, `Il reste ${st[win].alive} survivant(s) · ${st[win].kills} victime(s) dévorée(s).`);
+  }
+  if (D.t >= D.T) {
+    if (D.mode === 'food') { const [a, b] = [st[0].eaten, st[1].eaten]; return endDuel(w, a === b ? null : a > b ? 0 : 1, `Score final : ${a} 🦐 contre ${b} 🦐.`); }
+    if (D.mode === 'sprint') { const [a, b] = [st[0].best, st[1].best]; return endDuel(w, Math.abs(a - b) < 5 ? null : a > b ? 0 : 1, 'Temps écoulé : victoire au plus avancé.'); }
+    const ka = st[0].alive * 1000 + st[0].kills, kb = st[1].alive * 1000 + st[1].kills;
+    return endDuel(w, ka === kb ? null : ka > kb ? 0 : 1, `Temps écoulé : ${st[0].alive} contre ${st[1].alive} survivants.`);
+  }
+}
+function endDuel(w, win, msg) {
+  const D = w.duel; D.over = true; D.winner = win;
+  const S = D.sides;
+  $('winner').innerHTML = `<h2>${win === null ? '🤝 Égalité' : `🏆 Victoire : <span style="color:hsl(${S[win].hue},75%,65%)">${esc(S[win].label)}</span>`}</h2><p>${msg}</p>
+    <div class="row" style="justify-content:center"><button class="primary" id="wRe">🔁 Revanche</button><button id="wNew">⚙ Nouveau duel</button><button id="wBack">↩ Océan</button></div>`;
+  $('winner').classList.add('show');
+  $('wRe').onclick = () => startDuel(D.cfg); $('wNew').onclick = () => openArena(); $('wBack').onclick = showOcean;
+  burst(w.W / 2, w.H / 2, '255,215,120', 60, 6);
+}
+function showOcean() {
+  App.view = 'ocean'; App.selCr = null; App.follow = false; dirty.ind = true;
+  $('duelHud').classList.remove('show'); $('winner').classList.remove('show');
+}
+function renderDuelHud() {
+  const w = App.arena; if (App.view !== 'arena' || !w) return;
+  const D = w.duel, st = duelStats(w), S = D.sides;
+  const side = i => `<div class="dside" style="border-color:hsl(${S[i].hue},70%,55%)"><div class="n" style="color:hsl(${S[i].hue},75%,70%)">${esc(S[i].label)}</div>
+    <div class="s">${D.mode === 'food' ? `🦐 <b>${st[i].eaten}</b> crevettes<br>` : ''}${D.mode === 'fight' ? `❤ <b>${st[i].alive}</b> / ${S[i].start} en vie · ☠ ${st[i].kills}<br>` : ''}${D.mode === 'sprint' ? `🏁 ${Math.round(clamp(st[i].best / (w.W - 150) * 100, 0, 100))} % du parcours<br>` : ''}</div></div>`;
+  $('duelHud').innerHTML = side(0) + `<div class="dmid"><div class="clock">${Math.max(0, (D.T - D.t) / 60).toFixed(0)} s</div><button id="dQuit">↩ Océan</button></div>` + side(1);
+  $('dQuit').onclick = showOcean;
+}
+
+// =====================================================================
+//  ÉDITEUR D'ESPÈCE (contraintes personnalisables)
+// =====================================================================
+const PRESETS = {
+  '🐟 Poisson': { pattern: 'stripes', hue: 200, body: { segMin: 4, segMax: 10, segStart: 5, lenMin: 8, lenMax: 13, widthMin: 10, widthMax: 18, taperMin: 0.75, taperMax: 0.92, finMax: 3, pectMax: 2, strMax: 0.25, flexMax: 0.8, freqMax: 0.2 } },
+  '🐍 Anguille': { pattern: 'gradient', hue: 140, body: { segMin: 8, segMax: 22, segStart: 10, lenMin: 6, lenMax: 10, widthMin: 5, widthMax: 9, taperMin: 0.9, taperMax: 1, finMax: 1, pectMax: 0.3, strMax: 0.2, flexMax: 0.7, freqMax: 0.15 } },
+  '🐸 Têtard': { pattern: 'spots', hue: 35, body: { segMin: 2, segMax: 5, segStart: 3, lenMin: 8, lenMax: 14, widthMin: 16, widthMax: 26, taperMin: 0.5, taperMax: 0.75, finMax: 4, pectMax: 0, strMax: 0.35, flexMax: 1.1, freqMax: 0.3 } },
+  '🐉 Serpent de mer': { pattern: 'stripes', hue: 285, body: { segMin: 14, segMax: 24, segStart: 16, lenMin: 8, lenMax: 14, widthMin: 8, widthMax: 14, taperMin: 0.92, taperMax: 1, finMax: 2, pectMax: 1, strMax: 0.18, flexMax: 0.6, freqMax: 0.12 } },
+  '🪱 Ver primitif': { pattern: 'none', hue: 10, body: { segMin: 2, segMax: 24, segStart: 2, lenMin: 5, lenMax: 16, widthMin: 4, widthMax: 22, taperMin: 0.6, taperMax: 1, finMax: 4, pectMax: 3, strMax: 0.4, flexMax: 1.3, freqMax: 0.35 } },
+  '🦈 Squale-faucheur': { name: 'Squalus falcator', pattern: 'gradient', hue: 0, diet: 'carnivore', goal: 'predator',
+    brain: { layers: [14, 8], sensors: { rhythm: true, target: true, dist: true, speed: true, spin: false, energy: true, proprio: false, danger: false } },
+    body: { segMin: 5, segMax: 12, segStart: 6, lenMin: 9, lenMax: 15, widthMin: 12, widthMax: 22, taperMin: 0.7, taperMax: 0.9, finMax: 3.5, pectMax: 2, strMax: 0.3, flexMax: 0.7, freqMax: 0.2 } },
+  '🐡 Fuyard nacré': { name: 'Margarita fugax', pattern: 'spots', hue: 50, diet: 'herbivore', goal: 'survive',
+    brain: { layers: [12], sensors: { rhythm: true, target: true, dist: true, speed: true, spin: false, energy: false, proprio: false, danger: true } },
+    body: { segMin: 3, segMax: 8, segStart: 4, lenMin: 6, lenMax: 9, widthMin: 7, widthMax: 12, taperMin: 0.75, taperMax: 0.9, finMax: 3, pectMax: 1.5, strMax: 0.35, flexMax: 1, freqMax: 0.3 } },
+  '🦑 Fouet-lumière': { name: 'Flagellum lucis', pattern: 'gradient', hue: 300, diet: 'herbivore', goal: 'hunt',
+    brain: { layers: [12], act: 'sin', recurrent: true, sensors: { rhythm: false, target: true, dist: true, speed: false, spin: false, energy: false, proprio: true, danger: false } },
+    body: { segMin: 10, segMax: 20, segStart: 12, lenMin: 5, lenMax: 8, widthMin: 14, widthMax: 20, taperMin: 0.6, taperMax: 0.8, finMax: 0.5, pectMax: 2.5, strMax: 0.3, flexMax: 1.2, freqMax: 0.35 } },
+  '🐋 Léviathan lent': { name: 'Leviathan tardus', pattern: 'stripes', hue: 220, diet: 'carnivore', goal: 'predator',
+    brain: { layers: [20, 12], sensors: { rhythm: true, target: true, dist: true, speed: true, spin: true, energy: false, proprio: true, danger: false } },
+    body: { segMin: 16, segMax: 24, segStart: 18, lenMin: 12, lenMax: 18, widthMin: 16, widthMax: 26, taperMin: 0.9, taperMax: 1, finMax: 4, pectMax: 3, strMax: 0.15, flexMax: 0.5, freqMax: 0.1 } },
+  '⚡ Dard-éclair': { name: 'Spiculum fulgur', pattern: 'none', hue: 55, diet: 'herbivore', goal: 'speed',
+    brain: { layers: [8], sensors: { rhythm: true, target: true, dist: false, speed: true, spin: false, energy: false, proprio: false, danger: false } },
+    body: { segMin: 3, segMax: 6, segStart: 3, lenMin: 10, lenMax: 16, widthMin: 6, widthMax: 10, taperMin: 0.6, taperMax: 0.8, finMax: 4, pectMax: 0, strMax: 0.5, flexMax: 1.3, freqMax: 0.4 } },
+  '🌀 Derviche des fosses': { name: 'Turbo saltator', pattern: 'stripes', hue: 170, diet: 'herbivore', goal: 'spin',
+    brain: { layers: [10], act: 'sin', sensors: { rhythm: true, target: false, dist: false, speed: false, spin: true, energy: false, proprio: true, danger: false } },
+    body: { segMin: 4, segMax: 10, segStart: 5, lenMin: 7, lenMax: 12, widthMin: 8, widthMax: 14, taperMin: 0.8, taperMax: 1, finMax: 2.5, pectMax: 1, strMax: 0.3, flexMax: 1.2, freqMax: 0.3 } },
+  '🧠 Philosophe des abysses': { name: 'Sapiens profundus', pattern: 'gradient', hue: 265, diet: 'omnivore', goal: 'hunt',
+    brain: { layers: [24, 24, 16], recurrent: true, neurogenesis: true, sensors: { rhythm: true, target: true, dist: true, speed: true, spin: true, energy: true, proprio: true, danger: true } },
+    body: { segMin: 4, segMax: 14, segStart: 6, lenMin: 7, lenMax: 12, widthMin: 9, widthMax: 16, taperMin: 0.75, taperMax: 0.95, finMax: 3, pectMax: 2, strMax: 0.28, flexMax: 0.9, freqMax: 0.22 } },
+  '🪸 Brouteur-récif': { name: 'Corallivora lata', pattern: 'spots', hue: 25, diet: 'omnivore', goal: 'hunt',
+    brain: { layers: [12], sensors: { rhythm: true, target: true, dist: true, speed: false, spin: false, energy: true, proprio: false, danger: true } },
+    body: { segMin: 4, segMax: 9, segStart: 5, lenMin: 7, lenMax: 10, widthMin: 16, widthMax: 24, taperMin: 0.65, taperMax: 0.85, finMax: 3, pectMax: 3, strMax: 0.25, flexMax: 0.8, freqMax: 0.2 } },
+};
+function applyPreset(c, p) {
+  c.body = structuredClone(p.body); c.pattern = p.pattern; c.hue = p.hue;
+  if (p.name) c.name = p.name;
+  if (p.diet) c.diet = p.diet;
+  if (p.goal) c.goal.type = p.goal;
+  if (p.brain) { const b = structuredClone(p.brain); c.brain = { ...c.brain, act: 'tanh', recurrent: false, ...b, sensors: { ...c.brain.sensors, ...(b.sensors || {}) } }; }
+  return c;
+}
+const getP = (o, p) => p.split('.').reduce((a, k) => a[k], o);
+const setP = (o, p, v) => { const ks = p.split('.'), last = ks.pop(); ks.reduce((a, k) => a[k], o)[last] = v; };
+const FIELDS = [
+  ['Identité', [
+    { t: 'text', p: 'name', l: 'Nom de l\'espèce' },
+    { t: 'range', p: 'hue', l: 'Couleur', min: 0, max: 359, step: 1, f: v => `<span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:hsl(${v},62%,48%);vertical-align:middle"></span>` },
+    { t: 'select', p: 'pattern', l: 'Motif', o: { none: 'Uni', stripes: 'Rayures', spots: 'Taches', gradient: 'Dégradé' } },
+  ]],
+  ['🦴 Squelette', [
+    { t: 'range2', p: ['body.segMin', 'body.segMax'], l: 'Vertèbres possibles (min / max)', min: 2, max: 24, step: 1 },
+    { t: 'range', p: 'body.segStart', l: 'Vertèbres à la naissance de l\'espèce', min: 2, max: 24, step: 1 },
+    { t: 'range2', p: ['body.lenMin', 'body.lenMax'], l: 'Longueur d\'une vertèbre', min: 4, max: 20, step: 0.5 },
+    { t: 'range2', p: ['body.widthMin', 'body.widthMax'], l: 'Épaisseur de la tête', min: 3, max: 26, step: 0.5 },
+    { t: 'range2', p: ['body.taperMin', 'body.taperMax'], l: 'Effilement vers la queue (1 = cylindre)', min: 0.5, max: 1, step: 0.01 },
+  ]],
+  ['💪 Muscles & nageoires', [
+    { t: 'range', p: 'body.strMax', l: 'Puissance musculaire maximale', min: 0.03, max: 0.5, step: 0.01 },
+    { t: 'range', p: 'body.flexMax', l: 'Flexibilité max des articulations', min: 0.15, max: 1.4, step: 0.05, f: v => (v * 57.3).toFixed(0) + '°' },
+    { t: 'range', p: 'body.freqMax', l: 'Rythme max de l\'oscillateur', min: 0.03, max: 0.4, step: 0.01 },
+    { t: 'range', p: 'body.finMax', l: 'Nageoire caudale (taille max)', min: 0, max: 4, step: 0.1 },
+    { t: 'range', p: 'body.pectMax', l: 'Nageoires pectorales (taille max)', min: 0, max: 3, step: 0.1 },
+  ]],
+  ['🧠 Cerveau', [
+    { t: 'layers' },
+    { t: 'select', p: 'brain.act', l: 'Type de neurones', o: ACT_NAMES },
+    { t: 'check', p: 'brain.recurrent', l: 'Mémoire à court terme : les neurones de la couche 1 se renvoient leur signal (récurrence)' },
+    { t: 'check', p: 'brain.neurogenesis', l: 'Neurogenèse : des neurones peuvent naître ou disparaître par mutation' },
+    { t: 'sensors' },
+  ]],
+  ['🧬 Évolution', [
+    { t: 'range', p: 'evo.pop', l: 'Copies par génération', min: 50, max: 1000, step: 50 },
+    { t: 'range', p: 'evo.mutRate', l: 'Taux de mutation (part des synapses modifiées)', min: 0.01, max: 0.3, step: 0.01, f: v => Math.round(v * 100) + ' %' },
+    { t: 'range', p: 'evo.mutPower', l: 'Force des mutations', min: 0.05, max: 1.2, step: 0.05 },
+    { t: 'range', p: 'evo.elite', l: 'Élitisme (meilleurs gardés intacts)', min: 0, max: 0.3, step: 0.01, f: v => Math.round(v * 100) + ' %' },
+    { t: 'range', p: 'evo.vertMut', l: 'Probabilité de mutation des vertèbres', min: 0, max: 0.2, step: 0.01, f: v => Math.round(v * 100) + ' %' },
+    { t: 'range', p: 'evo.trials', l: 'Essais par copie (plus fiable mais plus lent)', min: 1, max: 4, step: 1 },
+    { t: 'check', p: 'evo.crossover', l: 'Reproduction sexuée (mélange des gènes de 2 parents)' },
+  ]],
+  ['🎯 Régime, objectif & environnement', [
+    { t: 'select', p: 'diet', l: 'Régime alimentaire', o: DIETS },
+    { t: 'select', p: 'goal.type', l: 'Ce que l\'espèce doit apprendre', o: GOALS },
+    { t: 'range', p: 'goal.energyCost', l: 'Pénalité de dépense d\'énergie', min: 0, max: 3, step: 0.1 },
+    { t: 'range', p: 'goal.dur', l: 'Durée d\'un test', min: 200, max: 1500, step: 50 },
+    { t: 'range', p: 'env.viscosity', l: 'Viscosité de l\'eau du labo (1 = océan)', min: 0.3, max: 2, step: 0.1 },
+  ]],
+];
+let ed = null;
+function openEditor(sp) {
+  const cfg = sp ? structuredClone(sp.cfg) : Object.assign(defaultCfg(), { name: randomName(), hue: Math.floor(rnd(0, 360)) });
+  ed = { sp, cfg, prevT: 0 };
+  $('modal').innerHTML = `<div class="mbox"><div class="mform" id="edForm"></div>
+    <div class="mside">
+      <div class="h">Aperçu (corps moyen, nage simulée)</div>
+      <canvas id="edPrev"></canvas>
+      <div id="edInfo" style="font-size:12px;line-height:1.7;color:#c9cede"></div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6">Les contraintes sont des <b>limites</b> : l'évolution choisit librement à l'intérieur. Plus tu laisses de liberté, plus les solutions peuvent être surprenantes.</div>
+      <div class="mfoot"><button id="edCancel">Annuler</button><button class="primary" id="edOk">${sp ? 'Appliquer' : '🧬 Créer l\'espèce'}</button></div>
+    </div></div>`;
+  const dpr = window.devicePixelRatio || 1, pc = $('edPrev'); pc.width = 344 * dpr; pc.height = 230 * dpr; pc.style.width = '344px'; pc.style.height = '230px';
+  buildForm();
+  $('modal').classList.add('show');
+  $('edCancel').onclick = closeEditor;
+  $('edOk').onclick = () => {
+    const c = ed.cfg; if (!c.name.trim()) c.name = randomName();
+    if (ed.sp) { ed.sp.cfg = c; send({ t: 'cfg', id: ed.sp.id, cfg: c }); addLog(ed.sp, '✏ Contraintes modifiées : la population s\'adapte'); spTabFor = null; App.selSp = ed.sp; Tank.pendingReset = true; }
+    else { App.selSp = createSpecies(c); toast(`🧬 <b>${esc(c.name)}</b> est née dans le labo. Elle évolue déjà !`); }
+    closeEditor(); showTab('sp'); dirty.sp = true; renderSpeciesList();
+  };
+}
+function closeEditor() { $('modal').classList.remove('show'); ed = null; }
+function buildForm() {
+  const c = ed.cfg, f = $('edForm');
+  let h = `<h2>${ed.sp ? '✏ Modifier ' + esc(ed.sp.cfg.name) : '🧪 Créer une nouvelle espèce'}</h2>
+    <div class="intro">Fixe les règles du jeu. L'évolution fera le reste : des centaines de copies sont testées à chaque génération, les meilleures se reproduisent avec des mutations.</div>
+    <div class="h" style="margin-bottom:6px">Modèles de départ</div><div class="presets">${Object.keys(PRESETS).map(k => `<button data-pre="${k}">${k}</button>`).join('')}</div>`;
+  for (const [title, fields] of FIELDS) {
+    h += `<div class="sec"><div class="h">${title}</div>`;
+    for (const fd of fields) {
+      if (fd.t === 'text') h += `<div class="field"><label>${fd.l}</label><input type="text" data-p="${fd.p}" value="${esc(getP(c, fd.p))}" style="grid-column:2/4"></div>`;
+      if (fd.t === 'range') h += `<div class="field"><label>${fd.l}</label><input type="range" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${getP(c, fd.p)}"><span class="val" data-v="${fd.p}"></span></div>`;
+      if (fd.t === 'range2') h += `<div class="field"><label>${fd.l}</label><div class="two"><input type="range" data-p="${fd.p[0]}" data-pair="${fd.p[1]}" data-lo="1" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${getP(c, fd.p[0])}"><input type="range" data-p="${fd.p[1]}" data-pair="${fd.p[0]}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${getP(c, fd.p[1])}"></div><span class="val" data-v2="${fd.p.join(',')}"></span></div>`;
+      if (fd.t === 'select') h += `<div class="field"><label>${fd.l}</label><select data-p="${fd.p}" style="grid-column:2/4">${Object.entries(fd.o).map(([k, v]) => `<option value="${k}" ${getP(c, fd.p) === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>`;
+      if (fd.t === 'check') h += `<div class="checks" style="grid-template-columns:1fr;margin-bottom:8px"><label><input type="checkbox" data-p="${fd.p}" ${getP(c, fd.p) ? 'checked' : ''}> ${fd.l}</label></div>`;
+      if (fd.t === 'layers') {
+        h += `<div class="field"><label>Nombre de couches cachées</label><select id="edNL" style="grid-column:2/4">${[1, 2, 3].map(n => `<option ${c.brain.layers.length === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`;
+        c.brain.layers.forEach((v, i) => { h += `<div class="field"><label>Neurones max · couche ${i + 1}</label><input type="range" data-layer="${i}" min="2" max="32" step="1" value="${v}"><span class="val">${v}</span></div>`; });
+      }
+      if (fd.t === 'sensors') h += `<div style="margin:6px 0 4px;font-size:12px;color:#c9cede">Sens disponibles (entrées du cerveau)</div><div class="checks">${SENSOR_DEFS.map(d => `<label><input type="checkbox" data-sensor="${d.k}" ${c.brain.sensors[d.k] ? 'checked' : ''}> ${d.name}</label>`).join('')}</div>`;
+    }
+    h += '</div>';
+  }
+  f.innerHTML = h;
+  f.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { applyPreset(c, PRESETS[b.dataset.pre]); buildForm(); });
+  f.querySelectorAll('input[data-p], select[data-p]').forEach(el => {
+    const ev = el.type === 'range' ? 'input' : 'change';
+    el.addEventListener(ev, () => {
+      let v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+      setP(c, el.dataset.p, v);
+      if (el.dataset.pair) { // garder min ≤ max
+        const other = getP(c, el.dataset.pair);
+        if (el.dataset.lo && v > other) { setP(c, el.dataset.pair, v); f.querySelector(`[data-p="${el.dataset.pair}"]`).value = v; }
+        if (!el.dataset.lo && v < other) { setP(c, el.dataset.pair, v); f.querySelector(`[data-p="${el.dataset.pair}"]`).value = v; }
+      }
+      c.body.segStart = clamp(c.body.segStart, c.body.segMin, c.body.segMax);
+      const ss = f.querySelector('[data-p="body.segStart"]'); if (ss) ss.value = c.body.segStart;
+      refreshVals(); ed.prevSim = null;
+    });
+  });
+  f.querySelectorAll('[data-layer]').forEach(el => el.oninput = () => { c.brain.layers[+el.dataset.layer] = +el.value; el.nextElementSibling.textContent = el.value; ed.prevSim = null; refreshVals(); });
+  $('edNL').onchange = e => { const n = +e.target.value; while (c.brain.layers.length < n) c.brain.layers.push(8); c.brain.layers.length = n; buildForm(); };
+  f.querySelectorAll('[data-sensor]').forEach(el => el.onchange = () => { c.brain.sensors[el.dataset.sensor] = el.checked; refreshVals(); });
+  refreshVals(); ed.prevSim = null;
+}
+function refreshVals() {
+  const c = ed.cfg, f = $('edForm');
+  for (const [, fields] of FIELDS) for (const fd of fields) {
+    if (fd.t === 'range') { const el = f.querySelector(`[data-v="${fd.p}"]`); const v = getP(c, fd.p); if (el) el.innerHTML = fd.f ? fd.f(v) : (+v).toString(); }
+    if (fd.t === 'range2') { const el = f.querySelector(`[data-v2="${fd.p.join(',')}"]`); if (el) el.textContent = `${getP(c, fd.p[0])} – ${getP(c, fd.p[1])}`; }
+  }
+  const nS = Object.values(c.brain.sensors).filter(Boolean).length;
+  $('edInfo').innerHTML = `🧠 <b>${synapseCount(c)}</b> synapses · ${c.brain.layers.join(' → ')} neurones · ${nS} sens<br>
+    🦴 ${c.body.segMin}–${c.body.segMax} vertèbres (départ ${c.body.segStart})<br>
+    📏 Taille : ${Math.round(c.body.segMin * c.body.lenMin)} à ${Math.round(c.body.segMax * c.body.lenMax)} px<br>
+    🧬 ${c.evo.pop} copies × ${c.evo.trials} essai(s) par génération<br>
+    🎯 ${GOALS[c.goal.type]}` + (!c.brain.sensors.target && ['hunt'].includes(c.goal.type) ? '<br><span style="color:#eb6263">⚠ Sans « direction de la cible », elle ne pourra pas trouver les crevettes !</span>' : '') +
+    (!c.brain.sensors.rhythm && !c.brain.recurrent ? '<br><span style="color:#d28e05">⚠ Sans rythme ni mémoire, onduler sera très difficile à inventer.</span>' : '');
+}
+function renderEditorPreview(t) {
+  if (!ed) return;
+  const c = ed.cfg;
+  if (!ed.prevSim) {
+    const b = c.body, g = randGenome(c);
+    g.nSeg = b.segStart; g.segLen = (b.lenMin + b.lenMax) / 2; g.headW = (b.widthMin + b.widthMax) / 2; g.taper = (b.taperMin + b.taperMax) / 2;
+    g.fin = b.finMax * 0.6; g.pect = b.pectMax * 0.6; g.flex = b.flexMax * 0.8; g.str = b.strMax; g.freq = b.freqMax; g.hue = c.hue;
+    const s = new Sim(clampGenome(g, c), c, 0, 0, 0); s.manual = (j, tt) => Math.sin(tt * 0.12 - j * 0.75);
+    ed.prevSim = s;
+  }
+  const s = ed.prevSim; s.g.hue = c.hue;
+  s.step(0, 0, 1, 1); s.step(0, 0, 1, 1);
+  const el = $('edPrev'), c2 = el.getContext('2d'), dpr = window.devicePixelRatio || 1, W = 344, H = 230;
+  c2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const gr = c2.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#13527e'); gr.addColorStop(1, '#061a33'); c2.fillStyle = gr; c2.fillRect(0, 0, W, H);
+  const size = s.n * s.L + 40, z = clamp((W - 40) / size, 0.4, 2.2);
+  c2.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - s.x * z), dpr * (H / 2 - s.y * z));
+  c2.strokeStyle = 'rgba(255,255,255,.06)'; c2.lineWidth = 1 / z;
+  const x0 = s.x - W / 2 / z, y0 = s.y - H / 2 / z;
+  for (let x = Math.floor(x0 / 40) * 40; x < x0 + W / z; x += 40) { c2.beginPath(); c2.moveTo(x, y0); c2.lineTo(x, y0 + H / z); c2.stroke(); }
+  for (let y = Math.floor(y0 / 40) * 40; y < y0 + H / z; y += 40) { c2.beginPath(); c2.moveTo(x0, y); c2.lineTo(x0 + W / z, y); c2.stroke(); }
+  drawCreature(c2, s, { pattern: c.pattern, muscles: App.ov.muscles, xray: App.ov.xray, z });
+}
+
+// =====================================================================
+//  SAUVEGARDE (IndexedDB : tout reste dans ton navigateur)
+// =====================================================================
+const DB = 'abysse-labo', STORE = 'kv';
+function idb() { return new Promise((res, rej) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore(STORE); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbSet(k, v) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+async function idbGet(k) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readonly'); const r = tx.objectStore(STORE).get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+let saving = false;
+async function saveAll() {
+  if (saving) return; saving = true;
+  try {
+    const snap = await request({ t: 'snapshot' });
+    if (snap) for (const s of snap) { const sp = spById(s.id); if (sp) { sp.seeds = s.seeds; sp.gen = Math.max(sp.gen, s.gen); sp.evals = s.evals; } }
+    const data = {
+      v: 2, cam: App.ocean.cam, settings: App.ocean.settings, ov: App.ov,
+      species: App.species.map(sp => ({ id: sp.id, cfg: sp.cfg, gen: sp.gen, evals: sp.evals, running: sp.running, history: sp.history, champs: sp.champs, log: sp.log, record: sp.record, lastVert: sp.lastVert, lastNeur: sp.lastNeur, seeds: sp.seeds })),
+      creatures: App.ocean.creatures.slice(0, 500).map(c => ({ sp: c.sp.id, spec: c.specId, g: c.sim.g, x: c.sim.x, y: c.sim.y, energy: c.energy, ogen: c.ogen, eaten: c.eaten, kills: c.kills, labGen: c.labGen, sterile: c.sterile, immortal: c.immortal, name: c.name })),
+      specimens: App.specimens.map(s => ({ ...s, ghost: undefined })),
+    };
+    await idbSet('state', data);
+    $('saveState').textContent = '💾 Sauvegardé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { $('saveState').textContent = '⚠ Sauvegarde impossible : ' + e.message; }
+  saving = false;
+}
+$('saveBtn').onclick = saveAll;
+setInterval(saveAll, 30000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveAll(); });
+
+async function boot() {
+  let data = null;
+  try { data = await idbGet('state'); } catch (e) {}
+  if (data && data.species && data.species.length) {
+    Object.assign(App.settings, data.settings || {}); Object.assign(App.ov, data.ov || {}); if (data.cam) Object.assign(App.cam, data.cam);
+    for (const s of data.species) createSpecies(Object.assign(defaultCfg(), s.cfg), s);
+    App.specimens = (data.specimens || []).map(s => { s.cfg = Object.assign(defaultCfg(), s.cfg); s.g = clampGenome(s.g, s.cfg); return s; });
+    for (const c of data.creatures || []) {
+      const spec = c.spec && App.specimens.find(s => s.id === c.spec), sp = spec ? specSpecies(spec) : spById(c.sp);
+      if (sp) spawnCreature(clampGenome(c.g, sp.cfg), sp, c.x, c.y, { ...c, specId: c.spec }, App.ocean);
+    }
+    App.selSp = App.species[0];
+    const total = App.species.reduce((a, s) => a + s.evals, 0);
+    toast(`👋 Bon retour au labo ! ${App.species.length} espèces, ${fmt(total)} copies déjà testées, ${App.creatures.length} créatures dans l'océan.`);
+    $('saveState').textContent = '💾 Espèces restaurées';
+  } else {
+    const a = applyPreset(defaultCfg(), PRESETS['🐟 Poisson']); a.name = 'Piscis primordia'; a.hue = 195; a.goal.type = 'survive'; a.brain.sensors.danger = true;
+    const b = Object.assign(defaultCfg(), { name: 'Anguilla abyssi', hue: 130 }); b.body = structuredClone(PRESETS['🐍 Anguille'].body); b.pattern = 'gradient';
+    b.brain.layers = [10, 8]; b.brain.sensors.proprio = true;
+    const d = applyPreset(defaultCfg(), PRESETS['🦈 Squale-faucheur']);
+    createSpecies(a); createSpecies(b); createSpecies(d);
+    App.selSp = App.species[0];
+    toast('🧪 Trois espèces primitives évoluent dans le labo (à gauche), dont un prédateur 🦈.<br>Quand leur score monte, clique 🌊 pour les lâcher dans l\'océan, ou ⚔ Arène pour un duel !');
+  }
+  OVS.forEach(([k], i) => $('ovGrp').querySelectorAll('button')[i].classList.toggle('on', App.ov[k]));
+  for (let i = 0; i < App.settings.foodTarget * 0.8; i++) spawnFood();
+  dirty.list = dirty.sp = dirty.ind = true; Tank.pendingReset = true;
+}
+
+// =====================================================================
+//  BOUCLE PRINCIPALE
+// =====================================================================
+let spTabFor = null;
+let frameN = 0, lastUI = 0, fps = 60, lastT = performance.now();
+function frame(t) {
+  frameN++; fps = fps * 0.95 + 50 / Math.max(1, t - lastT); lastT = t;
+  rebuildGrid(App.world);
+  const ts = App.timeScale;
+  if (ts > 0) {
+    const dt = Math.min(1, ts), steps = Math.max(1, Math.round(ts));
+    for (let k = 0; k < steps; k++) { worldStep(App.world, dt); tankStep(dt); }
+  }
+  if (fallback) fallback.tick(7);
+  if (App.follow && App.selCr && App.selCr.sim && !App.selCr.tank) { App.cam.x += (App.selCr.sim.x - App.cam.x) * 0.1; App.cam.y += (App.selCr.sim.y - App.cam.y) * 0.1; }
+  renderOcean(t);
+  if (frameN % 3 === 0) renderMinimap();
+  if (Tank.pendingReset) tankReset();
+  if (App.tab === 'sp') renderTank(t);
+  if (dirty.list) { dirty.list = false; renderSpeciesList(); }
+  if (dirty.sp) { dirty.sp = false; if (!spCharts || spTabFor !== App.selSp) { buildSpeciesTab(); spTabFor = App.selSp; } else updateSpeciesTab(); }
+  if (dirty.ind || indBuiltFor !== App.selCr) { dirty.ind = false; buildIndTab(); }
+  if (App.tab === 'ind' && frameN % 2 === 0) { drawBrain(); drawMuscles(); drawPower(); }
+  if (ed) renderEditorPreview(t);
+  if (t - lastUI > 250) {
+    lastUI = t; updateCardBars(); updateIndTab(); renderDuelHud();
+    $('hud').style.display = App.view === 'arena' ? 'none' : '';
+    for (const sp of App.species) { // extinctions dans l'océan
+      const n = App.ocean.creatures.filter(c => c.sp === sp).length;
+      if (sp.oceanN > 0 && n === 0) { toast(`💀 Extinction : <b>${esc(sp.cfg.name)}</b> a disparu de l'océan.`); addLog(sp, '💀 Extinction de la population sauvage dans l\'océan'); }
+      if (sp.oceanN > 0 && n >= sp.oceanPeak * 2 && n >= 50) { addLog(sp, `📈 Explosion démographique dans l'océan : ${n} individus`); sp.oceanPeak = n; }
+      if (!sp.oceanPeak || n > sp.oceanPeak * 2) sp.oceanPeak = Math.max(sp.oceanPeak || 0, n);
+      sp.oceanN = n;
+    }
+    const counts = App.species.map(sp => `<span style="color:hsl(${sp.cfg.hue},70%,70%)">●</span> ${App.creatures.filter(c => c.sp === sp).length}`).join(' ');
+    $('hud').innerHTML = `🌊 <b>${App.creatures.length}</b> créatures · 🦐 ${App.food.length} · zoom ${App.cam.z.toFixed(2)}× · ${App.timeScale ? App.timeScale + '×' : 'pause'}<br>${counts}<br><span style="color:#8a90a6">naissances ${App.births} · morts ${App.deaths} · ${Math.round(fps)} img/s</span>`;
+    $('labSpeed').textContent = App.species.filter(s => s.running).length + ' en évolution';
+    if ($('omPops')) $('omPops').innerHTML = App.species.map(sp => `<div class="kv"><span><span style="color:hsl(${sp.cfg.hue},70%,62%)">●</span> ${esc(sp.cfg.name)}</span><b>${App.ocean.creatures.filter(c => c.sp === sp).length}</b></div>`).join('');
+  }
+  requestAnimationFrame(frame);
+}
+resize();
+boot().then(() => requestAnimationFrame(frame));
+window.__app = App;
+
+</script>
+</body>
+</html>
